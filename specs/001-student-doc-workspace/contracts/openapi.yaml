@@ -1,0 +1,66 @@
+openapi: 3.0.0
+info:
+  title: Student Workspace API
+  version: 1.0.0
+paths:
+  /documents:
+    get:
+      summary: List documents
+      responses:
+        "200":
+          description: List of documents
+    post:
+      summary: Create document
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                type:
+                  type: string
+                  enum: [RESUME, GENERAL]
+                content:
+                  type: string
+  /documents/{id}:
+    get:
+      summary: Get document
+    put:
+      summary: Update document
+    delete:
+      summary: Delete document
+
+  /resources/upload-url:
+    post:
+      summary: Get presigned upload URL
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                contentType:
+                  type: string
+                sizeBytes:
+                  type: integer
+
+  /keys:
+    get:
+      summary: List masked API keys
+    post:
+      summary: Save API key
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider:
+                  type: string
+                  enum: [OPENAI, GEMINI]
+                key:
+                  type: string

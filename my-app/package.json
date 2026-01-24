@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "my-app",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -18,9 +18,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@xstudent/eslint-config": "*",
-    "@xstudent/typescript-config": "*",
     "eslint": "^9",
+    "eslint-config-next": "15.5.2",
     "typescript": "^5"
   }
 }

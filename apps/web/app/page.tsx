@@ -1,5 +1,5 @@
 import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
+import { Button } from "@/components/ui/button";
 import styles from "./page.module.css";
 
 type Props = Omit<ImageProps, "src"> & {
@@ -29,7 +29,6 @@ export default function Home() {
           alt="Turborepo logo"
           width={180}
           height={38}
-          priority
         />
         <ol>
           <li>

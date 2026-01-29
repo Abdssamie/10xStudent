@@ -6,12 +6,31 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "check-types": "turbo run check-types",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "test": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "hono": "^4.0.0",
+    "@hono/node-server": "^1.12.0",
+    "drizzle-orm": "^0.33.0",
+    "@clerk/nextjs": "^5.0.0",
+    "zod": "^3.23.0",
+    "@hono/zod-openapi": "^0.16.0"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
     "turbo": "^2.7.5",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "drizzle-kit": "^0.24.0",
+    "@types/node": "^20.0.0",
+    "vitest": "^2.0.0",
+    "@playwright/test": "^1.47.0",
+    "eslint": "^8.57.0"
   },
   "engines": {
     "node": ">=18"

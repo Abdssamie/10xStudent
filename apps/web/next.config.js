@@ -1,4 +1,9 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  transpilePackages: ['@xstudent/database'],
+  experimental: {
+    serverComponentsExternalPackages: ['postgres'],
+  },
+}
 
-export default nextConfig;
+export default nextConfig

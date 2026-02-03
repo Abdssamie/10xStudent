@@ -1,5 +1,5 @@
 {
-  "name": "10xStudent",
+  "name": "10xstudent",
   "private": true,
   "scripts": {
     "build": "turbo run build",

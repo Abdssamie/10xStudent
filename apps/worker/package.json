@@ -10,6 +10,7 @@
         "@10xstudent/database": "*",
         "@10xstudent/domain": "*",
         "bullmq": "^5.67.2",
+        "drizzle-orm": "^0.45.1",
         "ioredis": "^5.9.2"
     },
     "devDependencies": {

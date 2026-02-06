@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pino Structured Logging with Hono"
+  short_description: "Structured logging with Pino in Hono applications"
+  default_prompt: "Help me implement structured logging with Pino in Hono"

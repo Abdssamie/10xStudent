@@ -1,24 +1,27 @@
-import { Job } from 'bullmq';
-
 /**
  * @id: compilation-processor
  * @priority: high
- * @progress: 50
+ * @progress: 0
  * @spec: Logic to process compilation jobs.
- * 1. Fetch Document structure/content from DB.
- * 2. Invoke Typst compiler (WASM or CLI).
- * 3. Upload PDF artifact.
- * 4. Update DB status.
- * @skills: ["typst", "typescript"]
+ * TODO: Implement compilation processor
+ * @skills: ["typst", "typescript", "bullmq"]
  */
 
-export const processor = async (job: Job) => {
-    console.log(`Processing job ${job.id} for document ${job.data.documentId}`);
+import { Job } from "bullmq";
+import type { CompilationJob, CompilationResult } from "@10xstudent/domain";
 
-    // Simulate compilation
-    await new Promise(resolve => setTimeout(resolve, 1000));
+export const processor = async (
+  job: Job<CompilationJob>,
+): Promise<CompilationResult> => {
+  console.log(`[Compile] Job ${job.id} - Not implemented yet`);
 
-    // TODO: Implement actual Typst compilation
-
-    return { status: 'success', pdfUrl: 'https://example.com/result.pdf' };
+  return {
+    status: "failed",
+    errors: [
+      {
+        message: "Compilation processor not implemented",
+      },
+    ],
+    compiledAt: new Date(),
+  };
 };

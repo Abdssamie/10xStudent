@@ -1,0 +1,4 @@
+interface:
+  display_name: "TanStack AI Integration"
+  short_description: "Build AI chat endpoints with tool calling"
+  default_prompt: "Help me implement TanStack AI chat endpoint with server tools"

@@ -1,0 +1,10 @@
+{
+  "name": "@10xstudent/templates",
+  "version": "0.1.0",
+  "main": "./src/typst/index.ts",
+  "types": "./src/typst/index.ts",
+  "devDependencies": {
+    "@10xstudent/typescript-config": "*",
+    "typescript": "^5.9.3"
+  }
+}

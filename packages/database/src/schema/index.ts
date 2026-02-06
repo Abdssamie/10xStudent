@@ -1,0 +1,77 @@
+import { relations } from "drizzle-orm";
+
+/**
+ * @id: schema-index
+ * @priority: high
+ * @progress: 100
+ * @directive: Export all schema tables and relations for Drizzle ORM
+ * @context: specs/01-database-api-foundation.md#database-schema
+ * @checklist: [
+ *   "✅ Export all table schemas (users, documents, sources, citations, credit_logs)",
+ *   "✅ Export all relations for Drizzle relational queries",
+ *   "✅ Export TypeScript types inferred from schemas",
+ *   "✅ Ensure proper module structure for tree-shaking"
+ * ]
+ * @deps: ["users-schema", "documents-schema", "sources-schema", "citations-schema", "credit-logs-schema"]
+ * @skills: ["typescript", "drizzle-orm"]
+ */
+
+// Export all table schemas
+export { users, type User, type NewUser, type UserPreferences } from "./users";
+export { documents, type Document, type NewDocument } from "./documents";
+export {
+  sources,
+  type Source,
+  type NewSource,
+  type SourceMetadata,
+} from "./sources";
+export { citations, type Citation, type NewCitation } from "./citations";
+export { creditLogs, type CreditLog, type NewCreditLog } from "./credit-logs";
+
+// Import tables for relations
+import { users } from "./users";
+import { documents } from "./documents";
+import { sources } from "./sources";
+import { citations } from "./citations";
+import { creditLogs } from "./credit-logs";
+
+// Define relations for Drizzle relational queries
+export const usersRelations = relations(users, ({ many }) => ({
+  documents: many(documents),
+  creditLogs: many(creditLogs),
+}));
+
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  user: one(users, {
+    fields: [documents.userId],
+    references: [users.id],
+  }),
+  sources: many(sources),
+  citations: many(citations),
+}));
+
+export const sourcesRelations = relations(sources, ({ one, many }) => ({
+  document: one(documents, {
+    fields: [sources.documentId],
+    references: [documents.id],
+  }),
+  citations: many(citations),
+}));
+
+export const citationsRelations = relations(citations, ({ one }) => ({
+  document: one(documents, {
+    fields: [citations.documentId],
+    references: [documents.id],
+  }),
+  source: one(sources, {
+    fields: [citations.sourceId],
+    references: [sources.id],
+  }),
+}));
+
+export const creditLogsRelations = relations(creditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [creditLogs.userId],
+    references: [users.id],
+  }),
+}));

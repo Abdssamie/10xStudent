@@ -10,6 +10,7 @@
         "studio": "drizzle-kit studio"
     },
     "dependencies": {
+        "@10xstudent/domain": "*",
         "drizzle-orm": "^0.45.1",
         "postgres": "^3.4.8"
     },

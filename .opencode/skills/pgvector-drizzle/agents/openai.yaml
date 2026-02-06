@@ -1,0 +1,4 @@
+interface:
+  display_name: "pgvector with Drizzle ORM"
+  short_description: "Vector embeddings and similarity search with PostgreSQL"
+  default_prompt: "Help me implement pgvector with Drizzle ORM for vector similarity search"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hono API Patterns"
+  short_description: "Hono route organization and middleware patterns"
+  default_prompt: "Help me implement Hono API routes and middleware"

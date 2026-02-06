@@ -1,9 +1,25 @@
-export * from './core/identity';
-export * from './core/project';
-export * from './documents/document';
-export * from './documents/compilation';
-export * from './assets/asset';
-export * from './compute/script';
-export * from './documents/structured-document';
-export * from './compute/node';
-export * from './agent/session';
+/**
+ * Domain Package - Business Logic & Validation
+ *
+ * Exports Zod schemas, types, and business logic for:
+ * - Document operations (CRUD, validation)
+ * - Source management (metadata, RAG)
+ * - Credit system (costs, calculations)
+ * - Citation formatting (APA, MLA, Chicago)
+ * - Compilation types (Typst compilation jobs)
+ */
+
+// Document schemas and types
+export * from "./document";
+
+// Source schemas and types
+export * from "./source";
+
+// Credit system
+export * from "./credits";
+
+// Citation formatting
+export * from "./citations";
+
+// Compilation types
+export * from "./compilation";

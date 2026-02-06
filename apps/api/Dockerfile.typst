@@ -1,0 +1,19 @@
+# Typst CLI Docker Container
+# @id: typst-dockerfile
+# @priority: high
+# @progress: 0
+# @directive: Create Dockerfile for Typst CLI with custom fonts and package support
+# @context: specs/03-typst-document-engine-templates.md#docker-container-setup
+# @checklist: [
+#   "Use ghcr.io/typst/typst:v0.12.0 as base image",
+#   "Create /usr/share/fonts/custom directory for custom fonts",
+#   "Copy fonts from host to container",
+#   "Run fc-cache -fv to update font cache",
+#   "Create /root/.local/share/typst/packages for Typst packages",
+#   "Set working directory to /app",
+#   "Expose necessary ports if needed"
+# ]
+# @deps: []
+# @skills: ["docker", "typst"]
+
+# Placeholder - Dockerfile will be created here

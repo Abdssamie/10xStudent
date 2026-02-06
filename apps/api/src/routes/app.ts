@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { authMiddleware } from "../middleware/auth";
+import { chatRouter } from "./chat";
+import { compileRouter } from "./compile";
 
 /**
  * @id: api-router
@@ -21,9 +23,14 @@ export const appRouter = new Hono();
 
 appRouter.get("/", (c) => c.json({ message: "Welcome to 10xStudent API" }));
 
-// Protected Routes
+// Protected Routes (with rate limiting)
 appRouter.use("/*", authMiddleware);
-// TODO: Add routes per spec:
+
+// Mount chat and compile routes (rate limiting applied in route files)
+appRouter.route("/chat", chatRouter);
+appRouter.route("/compile", compileRouter);
+
+// TODO: Add remaining routes per spec:
 // appRouter.route('/documents', documentsRouter);
 // appRouter.route('/sources', sourcesRouter);
 // appRouter.route('/credits', creditsRouter);

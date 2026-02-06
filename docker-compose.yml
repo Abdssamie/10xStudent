@@ -35,6 +35,8 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile.typst
     container_name: 10xstudent-typst
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["tail -f /dev/null"]
     volumes:
       - ./fonts:/usr/share/fonts/custom:ro
       - ./typst-packages:/root/.local/share/typst/packages:ro
@@ -50,7 +52,7 @@ services:
     image: redis:7-alpine
     container_name: 10xstudent-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data

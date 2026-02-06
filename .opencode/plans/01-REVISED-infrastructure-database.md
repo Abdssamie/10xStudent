@@ -55,11 +55,15 @@ postgres:
 
 Run: `docker-compose up postgres -d`
 
-**Step 3: Verify pgvector extension**
+**Step 3: Verify pgvector extension from migration**
 
-Run: `docker-compose exec postgres psql -U postgres -d 10xstudent -c "CREATE EXTENSION IF NOT EXISTS vector;"`
+The pgvector extension will be installed automatically by migration `0001_enable_pgvector.sql` when you run migrations in Task 4.
 
-Expected: `CREATE EXTENSION` or notice that it already exists
+To verify the extension is available (not yet installed):
+
+Run: `docker-compose exec postgres psql -U postgres -d 10xstudent -c "SELECT * FROM pg_available_extensions WHERE name = 'vector';"`
+
+Expected: Row showing `vector` extension is available
 
 **Step 4: Commit**
 

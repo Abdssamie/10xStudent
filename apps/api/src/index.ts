@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { appRouter } from './routes/app';
+import { webhooksRouter } from './routes/webhooks';
 
 /**
  * @id: api-server
@@ -17,6 +18,9 @@ app.use('*', logger());
 app.use('*', cors());
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date() }));
+
+// Mount webhooks router (before auth middleware)
+app.route('/webhooks', webhooksRouter);
 
 // Mount main application router
 app.route('/', appRouter);

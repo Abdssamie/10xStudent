@@ -1,57 +1,133 @@
 # Agent Instructions for 10xStudent
 
-## Project Constitution
+## 🚨 CRITICAL: USE SUPERPOWERS AND SKILLS! 🚨
 
-**CRITICAL**: This project follows a strict constitution (`.specify/memory/constitution.md`). All code changes MUST comply with these principles:
+**BEFORE DOING ANYTHING - READ THIS:**
 
-1. **Monorepo Organization**: Apps in `apps/`, packages in `packages/`. Apps depend on packages, never reverse.
-2. **Type Safety & Validation**: TypeScript strict mode + Zod schemas in `@10xstudent/domain` for all data shapes.
-3. **Shared Domain Logic**: Business logic lives in `@10xstudent/domain` package only. No duplication across apps.
-4. **API-First Design**: Document API contracts in `specs/[feature]/contracts/` before implementation.
-5. **Database Integrity**: All schema changes via Drizzle migrations. No direct DB modifications.
+This project has **superpowers skills** in `.opencode/skills/` that make your life EASIER and your work BETTER.
 
-**Violations require explicit justification in implementation plans.**
+### ⚡ Available Skills (USE THEM!)
+
+**ALWAYS check for relevant skills BEFORE implementing:**
+
+- **clerk-webhooks** - Clerk webhook signature verification patterns
+- **clerk-setup** - Clerk authentication setup
+- **hono-api-patterns** - Hono API routes, middleware, validation (USE THIS FOR API WORK!)
+- **drizzle-orm** - Drizzle ORM patterns and best practices
+- **pgvector-drizzle** - Vector embeddings with pgvector
+- **bullmq-redis** - Background job processing
+- **tanstack-ai** - TanStack AI integration patterns
+- **react-zustand-tanstack-query** - React state management
+- **rag-citations** - Citation formatting for RAG systems
+- **typst-wasm-codemirror** - Typst document compilation
+- **pino-hono** - Structured logging with Hono
+
+**HOW TO USE SKILLS:**
+```typescript
+// Load a skill BEFORE implementing anything related to it
+skill("hono-api-patterns")  // For API routes
+skill("clerk-webhooks")     // For webhooks
+skill("drizzle-orm")        // For database queries
+```
+
+**🔥 USE SKILLS = FASTER + BETTER + CORRECT CODE 🔥**
+
+---
+
+## 🎯 Superpowers Workflow (MANDATORY)
+
+**When starting ANY task, follow this workflow:**
+
+1. **Check for relevant skills** - Search `.opencode/skills/` for applicable skills
+2. **Load specific skills** - Use `skill("skill-name")` before implementing
+3. **Follow skill patterns** - Implement according to skill guidelines
+4. **Use superpowers as needed:**
+   - `brainstorming` - BEFORE creating features
+   - `writing-plans` - BEFORE multi-step tasks
+   - `executing-plans` - WHEN executing plans
+   - `using-git-worktrees` - BEFORE starting work
+   - `verification-before-completion` - BEFORE claiming complete
+   - `finishing-a-development-branch` - AFTER work complete
+
+**🚨 NEVER skip checking for skills - they save time and prevent mistakes! 🚨**
+
+---
+
+## 🆘 When Tasks Are Too Hard
+
+**If you encounter a difficult task or unfamiliar technology:**
+
+### Option 1: Use Context7 MCP Tool
+```typescript
+// Query official documentation for any library
+context7_resolve-library-id({ libraryName: "hono", query: "middleware patterns" })
+context7_query-docs({ libraryId: "/honojs/hono", query: "how to create middleware" })
+```
+
+**Use Context7 for:**
+- Official documentation lookup
+- API reference queries
+- Best practices from library maintainers
+- Up-to-date patterns and examples
+
+### Option 2: Create a New Skill
+```bash
+# If a pattern will be reused, create a skill!
+skill("writing-skills")  # Load skill creation guide
+# Then create skill in .encode/skills/[skill-name]/SKILL.md
+```
+
+**Create skills for:**
+- Patterns you'll use multiple times
+- Complex workflows that need documentation
+- Team knowledge that should be preserved
+- Integration patterns with third-party services
+
+**🚨 DON'T struggle alone - use Context7 or create a skill! 🚨**
+
+---
 
 ## Build & Development Commands
 
 ```bash
-# Development (all apps)
+# Development
 bun dev                    # Start all apps in watch mode
-turbo dev                  # Alternative using turbo directly
-
-# Development (specific app)
-turbo dev --filter=web     # Frontend only
 turbo dev --filter=api     # Backend API only
-turbo dev --filter=docs    # Docs site only
+turbo dev --filter=web     # Frontend only
 
 # Build
 bun run build              # Build all apps and packages
-turbo build --filter=web   # Build specific app
+turbo build --filter=api   # Build specific app
 
 # Linting & Type Checking
 bun run lint               # Lint all packages
 bun run check-types        # Type check all packages
-turbo lint --filter=api    # Lint specific package
 
 # Formatting
 bun run format             # Format all files with Prettier
 
-#from packages/database/)
+# Database (from packages/database/)
 cd packages/database
 bun run generate           # Generate Drizzle migrations
 bun run migrate            # Run migrations
-bun run push               # Push schema changes (dev only)
 bun run studio             # Open Drizzle Studio
+
+# Docker Services
+docker-compose up -d       # Start all services
+docker-compose logs -f     # View logs
 ```
 
 ## Testing
 
-**Tests are OPTIONAL** unless explicitly required in feature specs. When tests are needed:
+**Tests are OPTIONAL** unless explicitly required. When tests exist:
 
 ```bash
-# No test runner configured yet - add when needed
-# Recommended: vitest for unit/integration tests
+# No test runner configured yet - add vitest when needed
+# bun test                 # Run all tests
+# bun test path/to/test    # Run single test file
 ```
+
+---
 
 ## Code Style Guidelines
 
@@ -64,11 +140,9 @@ import { z } from "zod";
 
 // 2. Internal packages (monorepo)
 import { db, schema } from "@10xstudent/database";
-import { User } from "@10xstudent/domain";
 
 // 3. Relative imports
 import { authMiddleware } from "../middleware/auth";
-import type { AppContext } from "./types";
 ```
 
 ### TypeScript Standards
@@ -78,14 +152,9 @@ import type { AppContext } from "./types";
 export interface User {
   id: string;
   email: string;
-  preferences: UserPreferences;
 }
 
-// ✅ Use type for unions, intersections, utilities
-export type Theme = "light" | "dark" | "system";
-export type UserWithProjects = User & { projects: Project[] };
-
-// ✅ Always define return types for functions
+// ✅ Always define return types
 export async function getUser(id: string): Promise<User | null> {
   return await db.query.users.findFirst({ where: eq(schema.users.id, id) });
 }
@@ -95,9 +164,6 @@ const createUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
 });
-
-// ✅ Infer types from Zod schemas
-type CreateUserInput = z.infer<typeof createUserSchema>;
 
 // ❌ Never use 'any' (except for untyped third-party libs - document why)
 // ❌ Never use 'as' type assertions (use type guards instead)
@@ -112,17 +178,12 @@ function getUserById(id: string) {}
 
 // Interfaces & Types: PascalCase
 interface UserPreferences {}
-type ApiResponse<T> = { data: T };
 
 // Constants: UPPER_SNAKE_CASE
 const MAX_RETRIES = 3;
-const API_BASE_URL = process.env.API_URL;
 
-// Files: kebab-case
-// user-service.ts, auth-middleware.ts, project-router.ts
-
-// React Components: PascalCase files
-// UserProfile.tsx, ProjectCard.tsx
+// Files: kebab-case (user-service.ts, auth-middleware.ts)
+// React Components: PascalCase files (UserProfile.tsx)
 ```
 
 ### Error Handling
@@ -135,14 +196,6 @@ app.get("/users/:id", async (c) => {
   return c.json(user);
 });
 
-// ✅ Services: Throw typed errors
-class NotFoundError extends Error {
-  constructor(resource: string, id: string) {
-    super(`${resource} ${id} not found`);
-    this.name = "NotFoundError";
-  }
-}
-
 // ✅ Always handle async errors
 try {
   await riskyOperation();
@@ -152,94 +205,41 @@ try {
 }
 ```
 
-### Hono API Patterns
-
-```typescript
-// ✅ Use Zod validator middleware
-import { zValidator } from "@hono/zod-validator";
-
-app.post("/projects", zValidator("json", createProjectSchema), async (c) => {
-  const data = c.req.valid("json"); // Typed automatically
-  // ...
-});
-
-// ✅ Use context variables for auth
-declare module "hono" {
-  interface ContextVariableMap {
-    auth: { userId: string; sessionId: string };
-  }
-}
-
-// ✅ Check auth in protected routes
-const auth = c.get("auth");
-if (!auth) return c.json({ error: "Unauthorized" }, 401);
-```
-
-### Drizzle ORM Patterns
-
-```typescript
-// ✅ Import from @10xstudent/database
-import { db, schema, eq, and, desc } from "@10xstudent/database";
-
-// ✅ Use query builder (preferred)
-const users = await db.query.users.findMany({
-  where: eq(schema.users.active, true),
-  orderBy: [desc(schema.users.createdAt)],
-});
-
-// ✅ Use with for relations
-const project = await db.query.projects.findFirst({
-  where: eq(schema.projects.id, projectId),
-  with: { documents: true },
-});
-
-// ✅ Use transactions for multi-step operations
-await db.transaction(async (tx) => {
-  await tx.insert(schema.users).values(userData);
-  await tx.insert(schema.projects).values(projectData);
-});
-```
-
-### React/Next.js Patterns
-
-```typescript
-// ✅ Use 'use client' only when needed
-'use client';
-
-// ✅ Import from @/ alias for app code
-import { Button } from '@/components/ui/button';
-
-// ✅ Type component props
-interface ButtonProps {
-    variant?: 'primary' | 'secondary';
-    onClick: () => void;
-}
-
-export function Button({ variant = 'primary', onClick }: ButtonProps) {
-    // ...
-}
-
-// ✅ Use async Server Components
-export default async function ProjectPage({ params }: { params: { id: string } }) {
-    const project = await fetchProject(params.id);
-    return <ProjectView project={project} />;
-}
-```
+---
 
 ## Session Completion Workflow
 
 **MANDATORY when ending a session:**
 
-1. Run quality gates: `bun run lint && bun run check-types && bun run build`
-2. Commit all changes with descriptive messages
-3. **PUSH TO REMOTE** (CRITICAL):
+1. **Use `verification-before-completion` skill** - Verify all tests pass
+2. Run quality gates: `bun run lint && bun run check-types && bun run build`
+3. Commit all changes with descriptive messages
+4. **PUSH TO REMOTE** (CRITICAL):
    ```bash
    git pull --rebase
    git push
    git status  # MUST show "up to date with origin"
    ```
-4. Clean up stashes and branches
-5. Verify all changes committed AND pushed
-6. Provide context for next session
+5. **Use `finishing-a-development-branch` skill** - Complete the work properly
 
 **Work is NOT complete until `git push` succeeds.**
+
+---
+
+## 🔥 FINAL REMINDER: USE SKILLS! 🔥
+
+**Skills are NOT optional - they are REQUIRED for quality work!**
+
+- ✅ **DO**: Load relevant skills before implementing
+- ✅ **DO**: Follow skill patterns and guidelines
+- ✅ **DO**: Use superpowers workflow for all tasks
+- ✅ **DO**: Use Context7 for unfamiliar libraries
+- ✅ **DO**: Create skills for reusable patterns
+- ❌ **DON'T**: Implement without checking for skills
+- ❌ **DON'T**: Guess patterns when skills exist
+- ❌ **DON'T**: Struggle with hard tasks - use Context7 or create a skill!
+
+**Skills location:** `.oplls/`
+**Load skills with:** `skill("skill-name")`
+
+**🚨 ALWAYS CHECK FOR SKILLS FIRST! 🚨**

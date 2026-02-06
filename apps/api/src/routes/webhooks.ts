@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { Webhook } from "svix";
-import { db, schema } from "@10xstudent/database";
+import { db, schema, eq } from "@10xstudent/database";
 
 const { users } = schema;
 
@@ -19,8 +19,14 @@ webhooksRouter.post("/clerk", async (c) => {
   // Get raw body
   const body = await c.req.text();
 
-  // Verify webhook signature
-  const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET || "");
+  // Verify webhook signature using CLERK_WEBHOOK_SIGNING_SECRET
+  const webhookSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+  if (!webhookSecret) {
+    console.error("CLERK_WEBHOOK_SIGNING_SECRET not configured");
+    return c.json({ error: "Webhook secret not configured" }, 500);
+  }
+
+  const wh = new Webhook(webhookSecret);
 
   let event;
   try {
@@ -34,22 +40,47 @@ webhooksRouter.post("/clerk", async (c) => {
     return c.json({ error: "Invalid webhook signature" }, 401);
   }
 
-  // Handle verified event
-  if (event.type === "user.created") {
+  // Handle user.created and user.updated with upsert
+  if (event.type === "user.created" || event.type === "user.updated") {
     const userId = event.data.id;
 
-    await db.insert(users).values({
-      id: userId,
-      credits: 10000,
-      preferences: {
-        defaultCitationFormat: "APA",
-        defaultResearchDepth: "quick",
-      },
-      creditsResetAt: new Date(),
-    });
+    // Use upsert pattern: try insert, on conflict update
+    try {
+      await db
+        .insert(users)
+        .values({
+          id: userId,
+          credits: 10000,
+          preferences: {
+            defaultCitationFormat: "APA",
+            defaultResearchDepth: "quick",
+          },
+          creditsResetAt: new Date(),
+        })
+        .onConflictDoNothing(); // On user.updated, keep existing data
+    } catch (err) {
+      console.error("Failed to sync user:", err);
+      // Return 500 to trigger Svix retry
+      return c.json({ error: "Failed to sync user" }, 500);
+    }
 
     return c.json({ success: true });
   }
 
+  // Handle user.deleted
+  if (event.type === "user.deleted") {
+    const userId = event.data.id;
+
+    try {
+      await db.delete(users).where(eq(users.id, userId));
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+      return c.json({ error: "Failed to delete user" }, 500);
+    }
+
+    return c.json({ success: true });
+  }
+
+  // Return 200 for unhandled events (don't trigger retries)
   return c.json({ success: true });
 });

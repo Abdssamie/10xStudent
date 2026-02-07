@@ -1,10 +1,14 @@
 import { Hono } from "hono";
 import { rateLimitMiddleware } from "@/middleware/rate-limit";
+import { checkAiCreditsMiddleware } from "@/middleware/credits";
 
 export const chatRouter = new Hono();
 
 // Apply rate limiting: 10 requests per minute
 chatRouter.use("/", rateLimitMiddleware(10, 60000));
+
+// Apply credits check: block AI endpoints when credits are exhausted
+chatRouter.use("/", checkAiCreditsMiddleware);
 
 /**
  * Build system prompt for AI chat that enforces citation accuracy

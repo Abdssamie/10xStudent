@@ -11,6 +11,7 @@
   "dependencies": {
     "@10xstudent/database": "*",
     "@10xstudent/domain": "*",
+    "@aws-sdk/client-s3": "^3.985.0",
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@hono/zod-validator": "^0.7.6",
     "hono": "^4.11.7",

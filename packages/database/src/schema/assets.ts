@@ -16,7 +16,7 @@ export const assets = pgTable(
     documentId: uuid("document_id")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    r2Key: text("r2_key").notNull(), // S3/R2 path to asset
+    r2Key: text("r2_key").notNull(), // S3/R2 path to asset (images, files, etc.)
     filename: text("filename").notNull(),
     contentType: text("content_type").notNull(),
     size: integer("size").notNull(), // bytes

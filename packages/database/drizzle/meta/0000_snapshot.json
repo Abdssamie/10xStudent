@@ -1,5 +1,5 @@
 {
-  "id": "3c1ddf45-bb6e-477f-8d8e-504b301124c1",
+  "id": "1683a2ce-b867-4b87-ad3d-b59667d4785b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -436,8 +436,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "r2_key": {
-          "name": "r2_key",
+        "typst_key": {
+          "name": "typst_key",
           "type": "text",
           "primaryKey": false,
           "notNull": true

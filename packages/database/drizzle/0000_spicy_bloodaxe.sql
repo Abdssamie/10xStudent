@@ -39,7 +39,7 @@ CREATE TABLE "documents" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"title" text NOT NULL,
-	"r2_key" text NOT NULL,
+	"typst_key" text NOT NULL,
 	"bib_key" text,
 	"template" text NOT NULL,
 	"citation_format" text DEFAULT 'APA' NOT NULL,

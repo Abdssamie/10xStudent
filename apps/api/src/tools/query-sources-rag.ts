@@ -34,6 +34,17 @@ export async function querySources(
   // Generate embedding for the query
   const queryEmbedding = await embedText(query, contextLogger);
 
+  // Validate embedding is a 768-dimensional number array to prevent SQL injection
+  if (
+    !Array.isArray(queryEmbedding) ||
+    queryEmbedding.length !== 768 ||
+    !queryEmbedding.every((val) => typeof val === "number" && !isNaN(val))
+  ) {
+    throw new Error(
+      `Invalid embedding: expected 768-dimensional number array, got ${queryEmbedding?.length || 0} dimensions`,
+    );
+  }
+
   // Query database using pgvector cosine similarity
   // The <=> operator computes cosine distance (lower is more similar)
   const results = await db

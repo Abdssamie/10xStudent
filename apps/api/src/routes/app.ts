@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { authMiddleware } from "@/middleware/auth";
 import { chatRouter } from "./chat";
 import { compileRouter } from "./compile";
+import { documentsRouter } from "./documents";
 
 /**
  * @id: api-router
@@ -29,8 +30,8 @@ appRouter.use("/*", authMiddleware);
 // Mount chat and compile routes (rate limiting applied in route files)
 appRouter.route("/chat", chatRouter);
 appRouter.route("/compile", compileRouter);
+appRouter.route("/documents", documentsRouter);
 
 // TODO: Add remaining routes per spec:
-// appRouter.route('/documents', documentsRouter);
 // appRouter.route('/sources', sourcesRouter);
 // appRouter.route('/credits', creditsRouter);

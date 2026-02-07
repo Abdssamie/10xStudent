@@ -29,6 +29,16 @@ import { documents } from "./documents";
  * @skills: ["drizzle-orm", "postgresql", "pgvector", "typescript"]
  */
 
+// Source type enum
+export type SourceType =
+  | "journal"
+  | "book"
+  | "conference"
+  | "report"
+  | "thesis"
+  | "website"
+  | "blog";
+
 // Source metadata type
 export type SourceMetadata = {
   sourceType: "web" | "manual";
@@ -53,6 +63,10 @@ export const sources = pgTable(
       .defaultNow(),
     content: text("content"), // Extracted text for RAG
     embedding: vector("embedding", { dimensions: 768 }), // Google text-embedding-004, nullable
+    sourceType: text("source_type")
+      .$type<SourceType>()
+      .notNull()
+      .default("website"), // Detected or manually overridden
     metadata: jsonb("metadata").$type<SourceMetadata>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

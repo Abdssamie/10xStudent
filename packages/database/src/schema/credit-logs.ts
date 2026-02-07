@@ -8,7 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
-
 // Credit logs table schema
 export const creditLogs = pgTable(
   "credit_logs",
@@ -24,11 +23,11 @@ export const creditLogs = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({
+  (table) => [
     // Indexes for audit queries
-    userIdIdx: index("credit_logs_user_id_idx").on(table.userId),
-    timestampIdx: index("credit_logs_timestamp_idx").on(table.timestamp.desc()),
-  }),
+    index("credit_logs_user_id_idx").on(table.userId),
+    index("credit_logs_timestamp_idx").on(table.timestamp.desc()),
+  ],
 );
 
 // Type inference

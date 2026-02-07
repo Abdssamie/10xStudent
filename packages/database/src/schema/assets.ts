@@ -24,9 +24,7 @@ export const assets = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({
-    documentIdIdx: index("assets_document_id_idx").on(table.documentId),
-  }),
+  (table) => [index("assets_document_id_idx").on(table.documentId)],
 );
 
 // Type inference

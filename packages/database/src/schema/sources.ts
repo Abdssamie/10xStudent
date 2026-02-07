@@ -9,26 +9,6 @@ import {
 import { vector } from "drizzle-orm/pg-core";
 import { documents } from "./documents";
 
-/**
- * @id: sources-schema
- * @priority: high
- * @progress: 100
- * @directive: Implement sources table schema with pgvector embeddings for RAG
- * @context: specs/04-source-management-rag.md#source-storage-metadata
- * @checklist: [
- *   "✅ Define sources table with id, documentId, url, title, author, publicationDate, accessDate",
- *   "✅ Add content text field for extracted source content",
- *   "✅ Add embedding vector field (768 dimensions for Google text-embedding-004)",
- *   "✅ Add metadata JSONB field (sourceType: web|manual, isAvailable, extractedAt)",
- *   "✅ Set embedding to nullable (generated asynchronously by background job)",
- *   "✅ Add timestamps (createdAt)",
- *   "✅ Define foreign key to documents with cascade delete",
- *   "✅ Create vector similarity index using ivfflat for cosine similarity"
- * ]
- * @deps: ["documents-schema", "pgvector-migration"]
- * @skills: ["drizzle-orm", "postgresql", "pgvector", "typescript"]
- */
-
 // Source type enum
 export type SourceType =
   | "journal"
@@ -72,12 +52,10 @@ export const sources = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({
+  (table) => [
     // Indexes for performance
-    documentIdIdx: index("sources_document_id_idx").on(table.documentId),
-    // Vector similarity index is created via SQL migration (0001_enable_pgvector.sql)
-    // because Drizzle doesn't fully support pgvector index syntax yet
-  }),
+    index("sources_document_id_idx").on(table.documentId),
+  ],
 );
 
 // Type inference

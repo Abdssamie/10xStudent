@@ -24,12 +24,12 @@ export const chatMessages = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({
-    documentIdIdx: index("chat_messages_document_id_idx").on(table.documentId),
-    createdAtIdx: index("chat_messages_created_at_idx").on(
+  (table) => [
+    index("chat_messages_document_id_idx").on(table.documentId),
+    index("chat_messages_created_at_idx").on(
       table.createdAt.desc(),
     ),
-  }),
+  ],
 );
 
 export type NewChatMessage = typeof chatMessages.$inferInsert;

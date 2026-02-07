@@ -49,10 +49,10 @@ export const users = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({
+  (table) => [
     // Index for credit queries
-    creditsIdx: index("users_credits_idx").on(table.credits),
-  }),
+    index("users_credits_idx").on(table.credits),
+  ],
 );
 
 // User relations - will be defined after all tables are created

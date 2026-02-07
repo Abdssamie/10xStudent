@@ -19,15 +19,15 @@ export const citations = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({
+  (table) => [
     // Indexes for fast lookups
-    documentIdIdx: index("citations_document_id_idx").on(table.documentId),
-    citationNumberIdx: index("citations_citation_number_idx").on(
+    index("citations_document_id_idx").on(table.documentId),
+    index("citations_citation_number_idx").on(
       table.documentId,
       table.citationNumber.asc(),
     ),
-    sourceIdIdx: index("citations_source_id_idx").on(table.sourceId),
-  }),
+    index("citations_source_id_idx").on(table.sourceId),
+  ],
 );
 
 // Type inference

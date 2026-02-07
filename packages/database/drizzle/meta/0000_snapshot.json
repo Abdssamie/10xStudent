@@ -1,5 +1,5 @@
 {
-  "id": "1683a2ce-b867-4b87-ad3d-b59667d4785b",
+  "id": "ae8db53c-a7f8-4dcc-9264-d22a0fde41cb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -108,11 +108,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "role": {
-          "name": "role",
-          "type": "text",
+        "messages": {
+          "name": "messages",
+          "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "content": {
           "name": "content",
@@ -156,7 +156,7 @@
             {
               "expression": "created_at",
               "isExpression": false,
-              "asc": true,
+              "asc": false,
               "nulls": "last"
             }
           ],
@@ -382,7 +382,7 @@
             {
               "expression": "timestamp",
               "isExpression": false,
-              "asc": true,
+              "asc": false,
               "nulls": "last"
             }
           ],
@@ -505,7 +505,7 @@
             {
               "expression": "created_at",
               "isExpression": false,
-              "asc": true,
+              "asc": false,
               "nulls": "last"
             }
           ],
@@ -520,7 +520,7 @@
             {
               "expression": "updated_at",
               "isExpression": false,
-              "asc": true,
+              "asc": false,
               "nulls": "last"
             }
           ],
@@ -610,6 +610,13 @@
           "type": "vector(768)",
           "primaryKey": false,
           "notNull": false
+        },
+        "source_type": {
+          "name": "source_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'website'"
         },
         "metadata": {
           "name": "metadata",

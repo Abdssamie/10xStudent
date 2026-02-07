@@ -8,26 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
-/**
- * @id: documents-schema
- * @priority: high
- * @progress: 100
- * @directive: Implement documents table schema with citation counter and template support
- * @context: specs/01-database-api-foundation.md#database-schema
- * @checklist: [
- *   "✅ Define documents table with id, userId, title, typstContent, template, citationFormat, citationCount",
- *   "✅ Add citationCount integer field with default 0 for atomic citation numbering",
- *   "✅ Add template field (enum: research-paper, report, essay, article, notes)",
- *   "✅ Add citationFormat field (enum: APA, MLA, Chicago) with default APA",
- *   "✅ Enforce 1000-line limit validation (max 100000 chars)",
- *   "✅ Add timestamps (createdAt, updatedAt)",
- *   "✅ Define foreign key to users with cascade delete",
- *   "✅ Define relations to sources and citations"
- * ]
- * @deps: ["users-schema"]
- * @skills: ["drizzle-orm", "postgresql", "typescript"]
- */
-
 // Documents table schema
 export const documents = pgTable(
   "documents",
@@ -49,12 +29,12 @@ export const documents = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({
+  (table) => [
     // Indexes for performance
-    userIdIdx: index("documents_user_id_idx").on(table.userId),
-    createdAtIdx: index("documents_created_at_idx").on(table.createdAt.desc()),
-    updatedAtIdx: index("documents_updated_at_idx").on(table.updatedAt.desc()),
-  }),
+    index("documents_user_id_idx").on(table.userId),
+    index("documents_created_at_idx").on(table.createdAt.desc()),
+    index("documents_updated_at_idx").on(table.updatedAt.desc()),
+  ],
 );
 
 // Type inference

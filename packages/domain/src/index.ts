@@ -23,3 +23,6 @@ export * from "./citations";
 
 // Compilation types
 export * from "./compilation";
+
+// Source type detection
+export * from "./sources/source-type";

@@ -21,6 +21,7 @@
 
 // Import CitationFormat from document schemas to avoid duplication
 import type { CitationFormat } from "./document";
+export * from "./citations/keys";
 
 // Source metadata interface
 export interface SourceMetadata {

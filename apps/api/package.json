@@ -15,6 +15,7 @@
     "@hono/zod-validator": "^0.7.6",
     "hono": "^4.11.7",
     "pino": "^10.3.0",
+    "sanitize-filename": "^1.6.3",
     "svix": "^1.15.0",
     "zod": "^4.3.6"
   },

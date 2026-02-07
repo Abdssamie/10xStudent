@@ -21,6 +21,7 @@
 
 // Import CitationFormat from document schemas to avoid duplication
 import type { CitationFormat } from "./document";
+import type { SourceType } from "./sources/source-type";
 export * from "./citations/keys";
 
 // Source metadata interface
@@ -160,13 +161,11 @@ export interface SourceWithCitationKey {
   url: string;
   publicationDate: string;
   citationKey: string;
-  sourceType: import("./sources/source-type").SourceType;
+  sourceType: SourceType;
 }
 
 // Map source type to BibTeX entry type
-function getBibTeXEntryType(
-  sourceType: import("./sources/source-type").SourceType,
-): string {
+function getBibTeXEntryType(sourceType: SourceType): string {
   switch (sourceType) {
     case "journal":
       return "article";

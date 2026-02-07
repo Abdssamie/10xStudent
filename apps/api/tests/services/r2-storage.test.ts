@@ -6,7 +6,7 @@ import {
   validateUserId,
   validateDocumentId,
   sanitizeFilename,
-} from "../../src/services/r2-storage.js";
+} from "@/services/r2-storage";
 
 describe("validateUserId", () => {
   it("accepts valid UUID v4", () => {

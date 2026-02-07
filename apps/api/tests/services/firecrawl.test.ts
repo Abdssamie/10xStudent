@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSearchRequest } from "../../src/services/firecrawl.js";
+import { buildSearchRequest } from "@/services/firecrawl";
 
 describe("buildSearchRequest", () => {
   it("builds the Firecrawl search payload", () => {

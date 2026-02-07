@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware } from "@/middleware/auth";
 import { chatRouter } from "./chat";
 import { compileRouter } from "./compile";
 

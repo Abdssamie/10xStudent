@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSourceInsert } from "../../src/tools/add-source.js";
+import { buildSourceInsert } from "@/tools/add-source";
 
 describe("buildSourceInsert", () => {
   it("includes embedding and source type", () => {

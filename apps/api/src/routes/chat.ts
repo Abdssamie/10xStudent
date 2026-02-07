@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { rateLimitMiddleware } from "../middleware/rate-limit";
+import { rateLimitMiddleware } from "@/middleware/rate-limit";
 
 export const chatRouter = new Hono();
 

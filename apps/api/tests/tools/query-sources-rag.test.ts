@@ -1,7 +1,8 @@
 // Set DATABASE_URL before any imports
 process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
+import type { Logger } from "pino";
 
 // Mock the database package completely to prevent client initialization
 vi.mock("@10xstudent/database", async () => {
@@ -31,9 +32,17 @@ vi.mock("@/lib/embedding", () => ({
   embedText: vi.fn(),
 }));
 
-import { querySources } from "@/tools/query-sources-rag";
+import { querySources, type SourceResult } from "@/tools/query-sources-rag";
 import { db } from "@10xstudent/database";
 import { embedText } from "@/lib/embedding";
+
+// Type for the mock query chain
+interface MockQueryChain {
+  from: Mock;
+  where: Mock;
+  orderBy: Mock;
+  limit: Mock;
+}
 
 describe("querySources", () => {
   const mockEmbedding = new Array(768).fill(0.1);
@@ -42,11 +51,11 @@ describe("querySources", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default mock implementation
-    (embedText as any).mockResolvedValue(mockEmbedding);
+    (embedText as Mock).mockResolvedValue(mockEmbedding);
   });
 
   it("returns results sorted by similarity", async () => {
-    const mockResults = [
+    const mockResults: SourceResult[] = [
       {
         id: "source-1",
         documentId: mockDocumentId,
@@ -79,14 +88,14 @@ describe("querySources", () => {
       },
     ];
 
-    const mockQuery = {
+    const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue(mockResults),
     };
 
-    (db.select as any).mockReturnValue(mockQuery as any);
+    (db.select as Mock).mockReturnValue(mockQuery);
 
     const results = await querySources({
       documentId: mockDocumentId,
@@ -99,14 +108,14 @@ describe("querySources", () => {
   });
 
   it("filters by documentId correctly", async () => {
-    const mockQuery = {
+    const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([]),
     };
 
-    (db.select as any).mockReturnValue(mockQuery as any);
+    (db.select as Mock).mockReturnValue(mockQuery);
 
     await querySources({
       documentId: mockDocumentId,
@@ -118,14 +127,14 @@ describe("querySources", () => {
   });
 
   it("handles empty results", async () => {
-    const mockQuery = {
+    const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([]),
     };
 
-    (db.select as any).mockReturnValue(mockQuery as any);
+    (db.select as Mock).mockReturnValue(mockQuery);
 
     const results = await querySources({
       documentId: mockDocumentId,
@@ -136,14 +145,14 @@ describe("querySources", () => {
   });
 
   it("respects limit parameter", async () => {
-    const mockQuery = {
+    const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([]),
     };
 
-    (db.select as any).mockReturnValue(mockQuery as any);
+    (db.select as Mock).mockReturnValue(mockQuery);
 
     await querySources({
       documentId: mockDocumentId,
@@ -155,14 +164,14 @@ describe("querySources", () => {
   });
 
   it("uses default limit of 5 when not specified", async () => {
-    const mockQuery = {
+    const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([]),
     };
 
-    (db.select as any).mockReturnValue(mockQuery as any);
+    (db.select as Mock).mockReturnValue(mockQuery);
 
     await querySources({
       documentId: mockDocumentId,
@@ -174,7 +183,7 @@ describe("querySources", () => {
 
   it("validates embedding is 768-dimensional number array", async () => {
     // Mock invalid embedding (wrong dimensions)
-    (embedText as any).mockResolvedValue(new Array(512).fill(0.1));
+    (embedText as Mock).mockResolvedValue(new Array(512).fill(0.1));
 
     await expect(
       querySources({
@@ -188,9 +197,9 @@ describe("querySources", () => {
 
   it("validates embedding contains only numbers", async () => {
     // Mock invalid embedding (contains non-numbers)
-    const invalidEmbedding = new Array(768).fill(0.1);
-    invalidEmbedding[0] = "not a number" as any;
-    (embedText as any).mockResolvedValue(invalidEmbedding);
+    const invalidEmbedding: unknown[] = new Array(768).fill(0.1);
+    invalidEmbedding[0] = "not a number";
+    (embedText as Mock).mockResolvedValue(invalidEmbedding);
 
     await expect(
       querySources({
@@ -202,9 +211,9 @@ describe("querySources", () => {
 
   it("validates embedding contains no NaN values", async () => {
     // Mock invalid embedding (contains NaN)
-    const invalidEmbedding = new Array(768).fill(0.1);
+    const invalidEmbedding: number[] = new Array(768).fill(0.1);
     invalidEmbedding[0] = NaN;
-    (embedText as any).mockResolvedValue(invalidEmbedding);
+    (embedText as Mock).mockResolvedValue(invalidEmbedding);
 
     await expect(
       querySources({
@@ -215,15 +224,15 @@ describe("querySources", () => {
   });
 
   it("passes contextLogger to embedText", async () => {
-    const mockLogger = { info: vi.fn() } as any;
-    const mockQuery = {
+    const mockLogger: Partial<Logger> = { info: vi.fn() };
+    const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([]),
     };
 
-    (db.select as any).mockReturnValue(mockQuery as any);
+    (db.select as Mock).mockReturnValue(mockQuery);
 
     await querySources({
       documentId: mockDocumentId,
@@ -236,14 +245,14 @@ describe("querySources", () => {
 
   it("filters out sources without embeddings", async () => {
     // The where clause should include "embedding IS NOT NULL"
-    const mockQuery = {
+    const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([]),
     };
 
-    (db.select as any).mockReturnValue(mockQuery as any);
+    (db.select as Mock).mockReturnValue(mockQuery);
 
     await querySources({
       documentId: mockDocumentId,

@@ -231,31 +231,73 @@ const user = await preparedQuery.execute({ id: 1 });
 
 ### 10. Migrations
 
-Manage database schema changes with migrations.
+**⚠️ CRITICAL: NEVER WRITE MIGRATIONS MANUALLY ⚠️**
+
+**ALWAYS USE `drizzle-kit generate` TO AUTO-GENERATE MIGRATIONS FROM SCHEMA CHANGES.**
+
+Drizzle Kit automatically generates SQL migrations by comparing your TypeScript schema with the database state.
+
+#### Migration Workflow
+
+```bash
+# 1. Modify your schema files (e.g., src/schema/users.ts)
+# 2. Generate migration automatically
+drizzle-kit generate
+# or if you have a script:
+bun run generate
+
+# 3. Review the generated SQL in drizzle/ directory
+# 4. Apply migration to database
+drizzle-kit migrate
+# or
+drizzle-kit push
+```
+
+#### Example Workflow
 
 ```typescript
-// Generate migration
-// Run: drizzle-kit generate:pg
+// 1. Update schema file
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  age: integer('age'), // NEW FIELD ADDED
+  createdAt: timestamp('created_at').defaultNow(),
+});
 
-// Apply migration
-// Run: drizzle-kit push:pg
+// 2. Run: drizzle-kit generate
+// Drizzle Kit automatically creates migration SQL:
+// drizzle/0001_add_age_to_users.sql
 
-// Migration file example
-import { sql } from 'drizzle-orm';
+// 3. Review generated SQL (auto-created by drizzle-kit)
+// ALTER TABLE users ADD COLUMN age INTEGER;
 
-export async function up(db) {
-  await db.execute(sql`
-    CREATE TABLE users (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE
-    )
-  `);
-}
+// 4. Apply migration
+// Run: drizzle-kit migrate or drizzle-kit push
+```
 
-export async function down(db) {
-  await db.execute(sql`DROP TABLE users`);
-}
+#### Why NEVER Write Migrations Manually
+
+1. **Type Safety**: Drizzle Kit ensures migrations match your TypeScript schema
+2. **Consistency**: Auto-generation prevents human error and typos
+3. **Tracking**: Drizzle Kit maintains migration history and snapshots
+4. **Rollback**: Generated migrations include proper up/down logic
+5. **Diff Detection**: Automatically detects all schema changes
+
+#### Configuration
+
+```typescript
+// drizzle.config.ts
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  schema: './src/schema/index.ts',
+  out: './drizzle',
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL,
+  },
+});
 ```
 
 ## Common Patterns
@@ -415,11 +457,13 @@ export const db = drizzle(pool);
 
 ## Anti-Patterns to Avoid
 
-1. Not using transactions for related operations
-2. N+1 query problems - use relations instead
-3. Not using prepared statements for repeated queries
-4. Ignoring database indexes
-5. Not handling unique constraint violations
+1. **WRITING MIGRATIONS MANUALLY** - ALWAYS use `drizzle-kit generate` to auto-generate migrations from schema changes
+2. Not using transactions for related operations
+3. N+1 query problems - use relations instead
+4. Not using prepared statements for repeated queries
+5. Ignoring database indexes
+6. Not handling unique constraint violations
+7. Manually defining types instead of using schema inference
 
 ## Questions to Ask
 

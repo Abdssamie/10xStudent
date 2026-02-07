@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target node",
-    "start": "bun run dist/index.js"
+    "start": "bun run dist/index.js",
+    "test": "vitest"
   },
   "dependencies": {
     "@10xstudent/database": "*",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^25.2.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

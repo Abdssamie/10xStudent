@@ -160,14 +160,39 @@ export interface SourceWithCitationKey {
   url: string;
   publicationDate: string;
   citationKey: string;
+  sourceType: import("./sources/source-type").SourceType;
+}
+
+// Map source type to BibTeX entry type
+function getBibTeXEntryType(
+  sourceType: import("./sources/source-type").SourceType,
+): string {
+  switch (sourceType) {
+    case "journal":
+      return "article";
+    case "book":
+      return "book";
+    case "conference":
+      return "inproceedings";
+    case "report":
+      return "techreport";
+    case "thesis":
+      return "phdthesis";
+    case "website":
+    case "blog":
+      return "misc";
+    default:
+      return "misc";
+  }
 }
 
 // Generate BibTeX bibliography with citation keys
 export function generateBibTeX(sources: SourceWithCitationKey[]): string {
   const entries = sources.map((source) => {
     const year = new Date(source.publicationDate).getFullYear();
+    const entryType = getBibTeXEntryType(source.sourceType);
 
-    return `@article{${source.citationKey},
+    return `@${entryType}{${source.citationKey},
   title = {${source.title}},
   author = {${source.author}},
   year = {${year}},

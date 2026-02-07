@@ -27,6 +27,8 @@ export {
 } from "./sources";
 export { citations, type Citation, type NewCitation } from "./citations";
 export { creditLogs, type CreditLog, type NewCreditLog } from "./credit-logs";
+export { assets, type Asset, type NewAsset } from "./assets";
+export { chatMessages, type ChatMessage, type NewChatMessage } from "./chat-messages";
 
 // Import tables for relations
 import { users } from "./users";
@@ -34,6 +36,8 @@ import { documents } from "./documents";
 import { sources } from "./sources";
 import { citations } from "./citations";
 import { creditLogs } from "./credit-logs";
+import { assets } from "./assets";
+import { chatMessages } from "./chat-messages";
 
 // Define relations for Drizzle relational queries
 export const usersRelations = relations(users, ({ many }) => ({
@@ -48,6 +52,8 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   }),
   sources: many(sources),
   citations: many(citations),
+  assets: many(assets),
+  chatMessages: many(chatMessages),
 }));
 
 export const sourcesRelations = relations(sources, ({ one, many }) => ({
@@ -73,5 +79,19 @@ export const creditLogsRelations = relations(creditLogs, ({ one }) => ({
   user: one(users, {
     fields: [creditLogs.userId],
     references: [users.id],
+  }),
+}));
+
+export const assetsRelations = relations(assets, ({ one }) => ({
+  document: one(documents, {
+    fields: [assets.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  document: one(documents, {
+    fields: [chatMessages.documentId],
+    references: [documents.id],
   }),
 }));

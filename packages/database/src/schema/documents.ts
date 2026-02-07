@@ -37,7 +37,8 @@ export const documents = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
-    typstContent: text("typst_content").notNull(),
+    r2Key: text("r2_key").notNull(), // S3/R2 path to main.typ
+    bibKey: text("bib_key"), // S3/R2 path to refs.bib (optional)
     template: text("template").notNull(), // 'research-paper' | 'report' | 'essay' | 'article' | 'notes'
     citationFormat: text("citation_format").notNull().default("APA"), // 'APA' | 'MLA' | 'Chicago'
     citationCount: integer("citation_count").notNull().default(0),

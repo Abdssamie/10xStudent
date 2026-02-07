@@ -151,3 +151,29 @@ export function generateBibliographyTypst(
 
   return typstBibliography.join("\n");
 }
+
+// Source with citation key for BibTeX generation
+export interface SourceWithCitationKey {
+  id: string;
+  title: string;
+  author: string;
+  url: string;
+  publicationDate: string;
+  citationKey: string;
+}
+
+// Generate BibTeX bibliography with citation keys
+export function generateBibTeX(sources: SourceWithCitationKey[]): string {
+  const entries = sources.map((source) => {
+    const year = new Date(source.publicationDate).getFullYear();
+
+    return `@article{${source.citationKey},
+  title = {${source.title}},
+  author = {${source.author}},
+  year = {${year}},
+  url = {${source.url}}
+}`;
+  });
+
+  return entries.join("\n\n");
+}

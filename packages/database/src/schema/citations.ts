@@ -2,25 +2,6 @@ import { pgTable, uuid, integer, timestamp, index } from "drizzle-orm/pg-core";
 import { documents } from "./documents";
 import { sources } from "./sources";
 
-/**
- * @id: citations-schema
- * @priority: high
- * @progress: 100
- * @directive: Implement citations table to track which sources are cited and where
- * @context: specs/04-source-management-rag.md#citation-management-system
- * @checklist: [
- *   "✅ Define citations table with id, documentId, sourceId, citationNumber, position",
- *   "✅ Add citationNumber integer field for sequential numbering",
- *   "✅ Add position integer field for character position in document",
- *   "✅ Add timestamps (createdAt)",
- *   "✅ Define foreign keys to documents and sources with cascade delete",
- *   "✅ Define relations to documents and sources",
- *   "✅ Create indexes on documentId and citationNumber for fast lookups"
- * ]
- * @deps: ["documents-schema", "sources-schema"]
- * @skills: ["drizzle-orm", "postgresql", "typescript"]
- */
-
 // Citations table schema
 export const citations = pgTable(
   "citations",
@@ -43,7 +24,7 @@ export const citations = pgTable(
     documentIdIdx: index("citations_document_id_idx").on(table.documentId),
     citationNumberIdx: index("citations_citation_number_idx").on(
       table.documentId,
-      table.citationNumber,
+      table.citationNumber.asc(),
     ),
     sourceIdIdx: index("citations_source_id_idx").on(table.sourceId),
   }),

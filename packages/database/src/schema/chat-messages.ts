@@ -7,6 +7,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { documents } from "./documents";
+import { ChatMessage } from "@10xstudent/domain";
 
 // Chat messages for AI-assisted writing
 export const chatMessages = pgTable(
@@ -16,7 +17,7 @@ export const chatMessages = pgTable(
     documentId: uuid("document_id")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    role: text("role").notNull(), // 'user' | 'assistant' | 'system'
+    messages: jsonb("messages").$type<ChatMessage>(),
     content: text("content").notNull(),
     toolCalls: jsonb("tool_calls"), // For AI tool execution tracking
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -25,10 +26,10 @@ export const chatMessages = pgTable(
   },
   (table) => ({
     documentIdIdx: index("chat_messages_document_id_idx").on(table.documentId),
-    createdAtIdx: index("chat_messages_created_at_idx").on(table.createdAt),
+    createdAtIdx: index("chat_messages_created_at_idx").on(
+      table.createdAt.desc(),
+    ),
   }),
 );
 
-// Type inference
-export type ChatMessage = typeof chatMessages.$inferSelect;
 export type NewChatMessage = typeof chatMessages.$inferInsert;

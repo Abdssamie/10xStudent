@@ -52,8 +52,8 @@ export const documents = pgTable(
   (table) => ({
     // Indexes for performance
     userIdIdx: index("documents_user_id_idx").on(table.userId),
-    createdAtIdx: index("documents_created_at_idx").on(table.createdAt),
-    updatedAtIdx: index("documents_updated_at_idx").on(table.updatedAt),
+    createdAtIdx: index("documents_created_at_idx").on(table.createdAt.desc()),
+    updatedAtIdx: index("documents_updated_at_idx").on(table.updatedAt.desc()),
   }),
 );
 

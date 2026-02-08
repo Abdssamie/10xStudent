@@ -210,7 +210,7 @@ git commit -m "feat(db): add r2 keys, assets, and chat messages"
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { buildR2Key } from "../../src/services/r2-storage";
+import { buildR2Key } from "@/services/r2-storage";
 
 describe("buildR2Key", () => {
   it("builds document key from user and doc", () => {
@@ -257,7 +257,7 @@ git commit -m "feat(api): add r2 storage helpers and env"
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { detectSourceType } from "../../src/sources/source-type";
+import { detectSourceType } from "@/src/sources/source-type";
 
 describe("detectSourceType", () => {
   it("labels arxiv as journal", () => {
@@ -641,7 +641,7 @@ git commit -m "feat(web): add dashboard and editor shell"
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { debounceCompile } from "../../components/editor/typst-preview";
+import { debounceCompile } from "@/components/editor/typst-preview";
 
 describe("debounceCompile", () => {
   it("debounces compilation", () => {

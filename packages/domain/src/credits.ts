@@ -1,23 +1,3 @@
-/**
- * @id: credits-constants
- * @priority: medium
- * @progress: 100
- * @directive: Define credit cost constants and helper functions
- * @context: specs/01-database-api-foundation.md#credit-system
- * @checklist: [
- *   "✅ Define CREDIT_COSTS object with operations and costs",
- *   "✅ TYPST_GENERATION: (tokens) => Math.ceil(tokens / 1000)",
- *   "✅ WEB_SEARCH: 1 credit",
- *   "✅ RAG_QUERY: 0 credits (free)",
- *   "✅ SAVE_DOCUMENT: 0 credits (free)",
- *   "✅ Define CreditOperation type",
- *   "✅ Export deductCredits helper function",
- *   "✅ Export getUserCredits helper function"
- * ]
- * @deps: []
- * @skills: ["typescript"]
- */
-
 // Credit cost constants
 export const CREDIT_COSTS = {
   TYPST_GENERATION: (tokens: number) => Math.ceil(tokens / 1000),

@@ -8,7 +8,6 @@ import { env } from "@/config/env";
 
 /**
  * Create S3 client configured for Cloudflare R2
- * R2 is S3-compatible, so we use the AWS SDK with R2 endpoints
  */
 export const s3Client = new S3Client({
   region: "auto",

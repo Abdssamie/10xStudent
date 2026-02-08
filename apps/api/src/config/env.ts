@@ -7,7 +7,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.url(),
 
   // Clerk Authentication
   CLERK_SECRET_KEY: z.string().min(1),
@@ -18,7 +18,7 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1),
   R2_SECRET_ACCESS_KEY: z.string().min(1),
   R2_BUCKET_NAME: z.string().min(1),
-  R2_PUBLIC_URL: z.string().url().optional(),
+  R2_PUBLIC_URL: z.url().optional(),
 
   // Google AI
   GOOGLE_API_KEY: z.string().min(1).optional(),
@@ -42,7 +42,7 @@ const result = envSchema.safeParse(process.env);
 
 if (!result.success) {
   console.error("❌ Invalid environment variables:");
-  console.error(result.error.format());
+  console.error(result.error.message);
   throw new Error("Invalid environment variables");
 }
 

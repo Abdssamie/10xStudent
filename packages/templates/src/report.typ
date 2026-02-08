@@ -5,7 +5,19 @@
 #set page(
   paper: "a4",
   margin: (x: 2cm, y: 2cm),
-  numbering: "1",
+  export interface QuerySourcesInput {
+    documentId: string;
+    query: string;
+    limit?: number;
+    contextLogger?: Logger;
+  }
+  
+  export interface SourceResult {
+    sourceId: string;
+    title: string;
+    excerpt: string;
+    similarity: number;
+  } numbering: "1",
 )
 #set text(
   font: "Linux Libertine",

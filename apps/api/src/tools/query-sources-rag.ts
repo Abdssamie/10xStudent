@@ -16,7 +16,10 @@ export interface QuerySourcesInput {
   contextLogger?: Logger;
 }
 
-export interface SourceResult extends Source {
+export interface SourceResult {
+  sourceId: string;
+  title: string;
+  excerpt: string;
   similarity: number;
 }
 
@@ -50,17 +53,8 @@ export async function querySources(
   const results = await db
     .select({
       id: sources.id,
-      documentId: sources.documentId,
-      url: sources.url,
       title: sources.title,
-      author: sources.author,
-      publicationDate: sources.publicationDate,
-      accessDate: sources.accessDate,
       content: sources.content,
-      embedding: sources.embedding,
-      sourceType: sources.sourceType,
-      metadata: sources.metadata,
-      createdAt: sources.createdAt,
       similarity: sql<number>`1 - (${sources.embedding} <=> ${JSON.stringify(queryEmbedding)}::vector)`,
     })
     .from(sources)
@@ -72,5 +66,20 @@ export async function querySources(
     )
     .limit(limit);
 
-  return results;
+  // Map results to token-efficient format with excerpts
+  return results.map((result) => {
+    const content = result.content as string | null;
+    const title = result.title as string | null;
+    const similarity = result.similarity as number;
+
+    return {
+      sourceId: result.id as string,
+      title: title || "Untitled",
+      excerpt:
+        content && content.length > 500
+          ? content.slice(0, 500) + "..."
+          : content || "",
+      similarity,
+    };
+  });
 }

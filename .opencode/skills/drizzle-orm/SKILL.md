@@ -422,9 +422,9 @@ src/
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   email: text('email').notNull(),
-}, (table) => ({
-  emailIdx: index('email_idx').on(table.email),
-}));
+}, (table) => [
+  index('email_idx').on(table.email),
+]);
 ```
 
 ### 4. Handle Errors Properly

@@ -6,6 +6,7 @@
     "incremental": false,
     "isolatedModules": true,
     "lib": ["es2022"],
+    "types": ["bun-types"],
     "module": "ESNext",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
@@ -16,7 +17,6 @@
     "target": "ES2022",
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["bun-types"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

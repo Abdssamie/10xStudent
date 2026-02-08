@@ -1,22 +1,5 @@
 import { z } from "zod";
 
-/**
- * @id: document-schemas
- * @priority: high
- * @progress: 100
- * @directive: Define Zod validation schemas for document operations
- * @context: specs/01-database-api-foundation.md#zod-schemas
- * @checklist: [
- *   "✅ Define templateSchema enum (research-paper, report, essay, article, notes)",
- *   "✅ Define citationFormatSchema enum (APA, MLA, Chicago)",
- *   "✅ Define createDocumentSchema with title, typstContent, template, citationFormat",
- *   "✅ Define updateDocumentSchema with optional fields",
- *   "✅ Enforce max 100000 chars for typstContent (~1000 lines)",
- *   "✅ Export TypeScript types inferred from schemas"
- * ]
- * @deps: []
- * @skills: ["zod", "typescript"]
- */
 
 // Template enum schema
 export const templateSchema = z.enum([

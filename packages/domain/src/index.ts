@@ -26,3 +26,5 @@ export * from "./compilation";
 
 // Source type detection
 export * from "./sources/source-type";
+
+export * from "./ai";

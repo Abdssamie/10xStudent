@@ -55,35 +55,17 @@ describe("querySources", () => {
   });
 
   it("returns results sorted by similarity", async () => {
-    const mockResults: SourceResult[] = [
+    const mockResults = [
       {
         id: "source-1",
-        documentId: mockDocumentId,
-        url: "https://example.com/1",
         title: "Most Relevant",
-        author: null,
-        publicationDate: null,
-        accessDate: null,
         content: "Content 1",
-        embedding: mockEmbedding,
-        sourceType: "website",
-        metadata: null,
-        createdAt: new Date(),
         similarity: 0.95,
       },
       {
         id: "source-2",
-        documentId: mockDocumentId,
-        url: "https://example.com/2",
         title: "Less Relevant",
-        author: null,
-        publicationDate: null,
-        accessDate: null,
         content: "Content 2",
-        embedding: mockEmbedding,
-        sourceType: "website",
-        metadata: null,
-        createdAt: new Date(),
         similarity: 0.85,
       },
     ];
@@ -104,6 +86,10 @@ describe("querySources", () => {
 
     expect(results).toHaveLength(2);
     expect(results[0].similarity).toBeGreaterThan(results[1].similarity);
+    expect(results[0]).toHaveProperty("sourceId");
+    expect(results[0]).toHaveProperty("title");
+    expect(results[0]).toHaveProperty("excerpt");
+    expect(results[0]).toHaveProperty("similarity");
     expect(embedText).toHaveBeenCalledWith("test query", undefined);
   });
 

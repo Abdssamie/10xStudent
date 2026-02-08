@@ -1,25 +1,3 @@
-/**
- * @id: citations-formatting
- * @priority: high
- * @progress: 100
- * @directive: Implement citation formatting logic for APA, MLA, and Chicago styles
- * @context: specs/04-source-management-rag.md#citation-formatting
- * @checklist: [
- *   "✅ Define CitationFormat type (APA, MLA, Chicago)",
- *   "✅ Define Source interface with metadata fields",
- *   "✅ Implement formatCitation function with switch for each style",
- *   "✅ Implement formatAPA with author, year, title, URL, accessDate",
- *   "✅ Implement formatMLA with author, title, URL, accessDate",
- *   "✅ Implement formatChicago with author, title, URL, accessDate",
- *   "✅ Implement generateBibliography function (sorts by author, formats all sources)",
- *   "✅ Implement generateBibliographyTypst function (Typst format with #pagebreak)",
- *   "✅ Handle missing metadata gracefully (Unknown Author, n.d., Untitled)"
- * ]
- * @deps: []
- * @skills: ["typescript"]
- */
-
-// Import CitationFormat from document schemas to avoid duplication
 import type { CitationFormat } from "./document";
 import type { SourceType } from "./sources/source-type";
 export * from "./citations/keys";

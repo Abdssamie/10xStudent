@@ -40,7 +40,7 @@ chatRouter.post("/", async (c) => {
   const { messages } = await c.req.json();
 
   // Initialize Gemini adapter
-  const adapter = geminiText("gemini-2.0-flash", {
+  const adapter = geminiText("gemini-3-flash-preview", {
     apiKey: env.GOOGLE_API_KEY
   });
 

@@ -85,11 +85,11 @@ describe("querySources", () => {
     });
 
     expect(results).toHaveLength(2);
-    expect(results[0].similarity).toBeGreaterThan(results[1].similarity);
-    expect(results[0]).toHaveProperty("sourceId");
-    expect(results[0]).toHaveProperty("title");
-    expect(results[0]).toHaveProperty("excerpt");
-    expect(results[0]).toHaveProperty("similarity");
+    expect(results[0]!.similarity).toBeGreaterThan(results[1]!.similarity);
+    expect(results[0]!).toHaveProperty("sourceId");
+    expect(results[0]!).toHaveProperty("title");
+    expect(results[0]!).toHaveProperty("excerpt");
+    expect(results[0]!).toHaveProperty("similarity");
     expect(embedText).toHaveBeenCalledWith("test query", undefined);
   });
 
@@ -223,7 +223,7 @@ describe("querySources", () => {
     await querySources({
       documentId: mockDocumentId,
       query: "test query",
-      contextLogger: mockLogger,
+      contextLogger: mockLogger as Logger,
     });
 
     expect(embedText).toHaveBeenCalledWith("test query", mockLogger);

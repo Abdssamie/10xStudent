@@ -33,6 +33,27 @@ export interface ScrapeResult {
   publishedDate?: string;
 }
 
+interface FirecrawlResponse {
+  success: boolean;
+  data: {
+    markdown?: string;
+    content?: string;
+    metadata?: {
+      title?: string;
+      description?: string;
+      author?: string;
+      publishedTime?: string;
+    };
+    [key: string]: unknown;
+  } | {
+    // Search results format
+    url: string;
+    title?: string;
+    description?: string;
+    [key: string]: unknown;
+  }[];
+}
+
 /**
  * Build a Firecrawl search request payload
  */
@@ -95,14 +116,26 @@ export async function searchWeb(
       );
     }
 
-    const data = (await response.json()) as any;
+    const data = (await response.json()) as unknown as FirecrawlResponse;
+
+    if (!data.success || !Array.isArray(data.data)) {
+      opLogger.warn({ data }, "Unexpected search response format");
+      return [];
+    }
 
     // Firecrawl returns results in data.data array
-    const results: SearchResult[] = (data.data || []).map((item: any) => ({
-      url: item.url,
-      title: item.title || "Untitled",
-      description: item.description || "",
-    }));
+    const results: SearchResult[] = data.data.map((item) => {
+      const searchItem = item as {
+        url: string;
+        title?: string;
+        description?: string;
+      };
+      return {
+        url: searchItem.url || "",
+        title: searchItem.title || "Untitled",
+        description: searchItem.description || "",
+      };
+    });
 
     opLogger.info(
       { resultCount: results.length },
@@ -165,15 +198,21 @@ export async function scrapeUrl(
       );
     }
 
-    const data = (await response.json()) as any;
+    const data = (await response.json()) as unknown as FirecrawlResponse;
+
+    if (!data.success || Array.isArray(data.data)) {
+      throw new Error("Invalid scrape response format");
+    }
+
+    const metadata = data.data.metadata || {};
 
     // Extract content and metadata from Firecrawl response
     const result: ScrapeResult = {
       url,
-      title: data.data?.metadata?.title || data.data?.title || "Untitled",
-      content: data.data?.markdown || data.data?.content || "",
-      author: data.data?.metadata?.author,
-      publishedDate: data.data?.metadata?.publishedTime,
+      title: metadata.title || (data.data.title as string) || "Untitled",
+      content: data.data.markdown || data.data.content || "",
+      author: metadata.author,
+      publishedDate: metadata.publishedTime,
     };
 
     opLogger.info(

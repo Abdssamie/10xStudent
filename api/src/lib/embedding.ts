@@ -1,22 +1,4 @@
 /**
- * @id: embedding-service
- * @priority: high
- * @progress: 100
- * @directive: Implement Google text-embedding-004 API service for generating embeddings
- * @context: specs/04-source-management-rag.md#embedding-service
- * @checklist: [
- *   "✅ Implement embedText function accepting text string",
- *   "✅ Call Google Embedding API (text-embedding-004)",
- *   "✅ Return 768-dimensional embedding vector",
- *   "✅ Handle API errors gracefully",
- *   "✅ Add retry logic for rate limits",
- *   "✅ Log embedding generation with Pino"
- * ]
- * @deps: []
- * @skills: ["google-ai", "typescript", "pino-hono"]
- */
-
-/**
  * Embedding service for generating text embeddings using Google text-embedding-004 model.
  * Returns 768-dimensional vectors for semantic search with pgvector.
  *
@@ -184,9 +166,9 @@ export async function embedText(
       }
 
       // Parse successful response
-      const data = await response.json();
+      const data = (await response.json()) as any;
 
-      // Validate response structure
+      // Validate response structure to ensure it contains the expected embedding values
       if (!data.embedding?.values || !Array.isArray(data.embedding.values)) {
         opLogger.error(
           { event: "invalid_response", response: data },
@@ -313,7 +295,7 @@ export async function embedTextBatch(
 
   for (let i = 0; i < texts.length; i++) {
     try {
-      const embedding = await embedText(texts[i], batchLogger);
+      const embedding = await embedText(texts[i]!, batchLogger);
       embeddings.push(embedding);
       successCount++;
     } catch (error) {

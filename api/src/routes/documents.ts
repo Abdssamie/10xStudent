@@ -5,6 +5,8 @@ import { authMiddleware } from "@/middleware/auth";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, R2_BUCKET_NAME } from "@/services/r2-client";
 
+import { createDocumentSchema } from "@shared/src/document";
+
 const { documents } = schema;
 
 export const documentsRouter = new Hono();
@@ -18,7 +20,16 @@ documentsRouter.post("/", async (c) => {
   const userId = auth.userId;
 
   const body = await c.req.json();
-  const { title, template } = body;
+  const parsed = createDocumentSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json(
+      { error: "Invalid request", details: parsed.error.flatten() },
+      400
+    );
+  }
+
+  const { title, template, citationFormat } = parsed.data;
 
   // Generate document ID and R2 key
   const documentId = crypto.randomUUID();
@@ -46,7 +57,7 @@ documentsRouter.post("/", async (c) => {
       title,
       template,
       typstKey,
-      citationFormat: "APA",
+      citationFormat,
     })
     .returning();
 

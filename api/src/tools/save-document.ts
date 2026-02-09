@@ -15,7 +15,7 @@ export async function saveDocumentTool(
   const [document] = await db
     .update(documents)
     .set({
-      typstContent: params.typstContent,
+      // typstContent: params.typstContent, // TODO: Implement R2 storage upload for content, column does not exist
       updatedAt: new Date(),
     })
     .where(

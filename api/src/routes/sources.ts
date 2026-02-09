@@ -69,7 +69,7 @@ sourcesRouter.post("/:documentId", async (c) => {
         );
     }
 
-    const { url } = parsed.data;
+    const { url, citationKey } = parsed.data;
 
     try {
         // Step 1: Scrape URL for metadata
@@ -94,6 +94,7 @@ sourcesRouter.post("/:documentId", async (c) => {
         const sourceInsert = buildSourceInsert({
             documentId,
             url,
+            citationKey,
             title: scraped.title,
             content: scraped.content,
             embedding,

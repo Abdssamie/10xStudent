@@ -19,7 +19,6 @@ export const createDocumentSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(200, "Title must be less than 200 characters"),
-  typstKey: z.string().min(1),
   template: templateSchema,
   citationFormat: citationFormatSchema.default("APA"),
 });

@@ -1,21 +1,5 @@
 import { relations } from "drizzle-orm";
 
-/**
- * @id: schema-index
- * @priority: high
- * @progress: 100
- * @directive: Export all schema tables and relations for Drizzle ORM
- * @context: specs/01-database-api-foundation.md#database-schema
- * @checklist: [
- *   "✅ Export all table schemas (users, documents, sources, citations, credit_logs)",
- *   "✅ Export all relations for Drizzle relational queries",
- *   "✅ Export TypeScript types inferred from schemas",
- *   "✅ Ensure proper module structure for tree-shaking"
- * ]
- * @deps: ["users-schema", "documents-schema", "sources-schema", "citations-schema", "credit-logs-schema"]
- * @skills: ["typescript", "drizzle-orm"]
- */
-
 // Export all table schemas
 export { users, type User, type NewUser, type UserPreferences } from "./users";
 export { documents, type Document, type NewDocument } from "./documents";

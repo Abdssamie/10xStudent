@@ -8,16 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { vector } from "drizzle-orm/pg-core";
 import { documents } from "./documents";
-
-// Source type enum
-export type SourceType =
-  | "journal"
-  | "book"
-  | "conference"
-  | "report"
-  | "thesis"
-  | "website"
-  | "blog";
+import { type SourceType } from "@shared/src/source-type";
 
 // Source metadata type
 export type SourceMetadata = {
@@ -35,6 +26,7 @@ export const sources = pgTable(
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
     url: text("url").notNull(),
+    citationKey: text("citation_key"), // Unique key for Typst (e.g., @smith2023)
     title: text("title"),
     author: text("author"),
     publicationDate: timestamp("publication_date", { withTimezone: true }),
@@ -55,6 +47,8 @@ export const sources = pgTable(
   (table) => [
     // Indexes for performance
     index("sources_document_id_idx").on(table.documentId),
+    // Ensure citation keys are unique per document to avoid collisions in Typst
+    index("sources_citation_key_idx").on(table.documentId, table.citationKey), 
   ],
 );
 

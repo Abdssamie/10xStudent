@@ -1,27 +1,15 @@
 /**
- * Domain Package - Business Logic & Validation
+ * Domain Package - Shared Types & Schemas
  *
- * Exports Zod schemas, types, and business logic for:
- * - Document operations (CRUD, validation)
- * - Source management (metadata, RAG)
- * - Credit system (costs, calculations)
- * - Citation formatting (APA, MLA, Chicago)
- * - Compilation types (Typst compilation jobs)
+ * Focusing on essential data structures for:
+ * - Document generation (Typst)
+ * - Source management (RAG & Bibliography)
+ * - AI Chat
  */
 
-// Document schemas and types
 export * from "./document";
-
-// Source schemas and types
 export * from "./source";
-
-// Credit system
+export * from "./source-type";
 export * from "./credits";
-
-// Citation formatting
-export * from "./citations";
-
-// Source type detection
-export * from "./sources/source-type";
-
-export * from "./ai";
+export * from "./citations"; // Minimal type definition
+export * from "./ai"; // ChatMessage

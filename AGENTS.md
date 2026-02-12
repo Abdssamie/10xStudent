@@ -107,6 +107,7 @@ throw new ValidationError('Invalid input');
 8. **Validation:** Zod schemas for all input
 9. **Testing:** Vitest with `describe`/`it`/`expect`
 10. **Documentation:** NEVER create .md files (README, CHANGELOG, docs/, etc.) unless explicitly requested by user
+11. **Styling:** NEVER hardcode `globals.css` - always regenerate using `shadcn init` or `shadcn add` CLI tools
 
 ---
 

@@ -1,7 +1,5 @@
 import AppSidebar from '@/components/layout/app-sidebar';
 import Header from '@/components/layout/header';
-import { InfoSidebar } from '@/components/layout/info-sidebar';
-import { InfobarProvider } from '@/components/ui/infobar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
@@ -21,14 +19,11 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <InfobarProvider defaultOpen={false}>
-        <AppSidebar />
-        <SidebarInset>
-          <Header />
-          <main className="flex-1 overflow-auto p-4">{children}</main>
-        </SidebarInset>
-        <InfoSidebar side="right" />
-      </InfobarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <Header />
+        <main className="flex-1 overflow-auto p-4">{children}</main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }

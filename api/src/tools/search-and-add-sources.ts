@@ -6,8 +6,9 @@
 import { db, schema } from "@/database";
 import { searchWeb, scrapeUrls } from "@/services/firecrawl";
 import { generateEmbedding } from "@/lib/embeddings";
-import { buildSourceInsert } from "./add-source";
+import { detectSourceType } from "@/utils/source-detection";
 import type { Logger } from "pino";
+import type { NewSource } from "@/database/schema/sources";
 
 const { sources } = schema;
 
@@ -97,7 +98,7 @@ export async function searchAndAddSources(
         }
 
         // Build source insert object with automatic type detection
-        const sourceInsert = buildSourceInsert({
+        const sourceInsert: NewSource = {
           documentId,
           url: scraped.url,
           title: scraped.title,
@@ -105,7 +106,8 @@ export async function searchAndAddSources(
           embedding,
           author: scraped.author,
           publicationDate,
-        });
+          sourceType: detectSourceType(scraped.url),
+        };
 
         // Insert into database
         const [insertedSource] = await db

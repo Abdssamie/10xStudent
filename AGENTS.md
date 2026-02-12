@@ -21,8 +21,8 @@ bun run build && bun run check-types
 # API (Hono on port 3001)
 cd api && bun install && bun run dev
 bun run build && bun run typecheck
-bun run test              # All tests
-bun run test -- bibtex    # Single test (pattern match)
+bun run test -- --run              # All tests (non-interactive)
+bun run test -- --run bibtex       # Single test (pattern match, non-interactive)
 
 # Database (from api/)
 bun run db:generate       # Generate migrations from schema

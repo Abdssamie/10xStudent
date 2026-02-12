@@ -4,8 +4,11 @@ import { z } from "zod";
 export const replaceContentDef = toolDefinition({
   name: "replaceContent",
   description:
-    "Replace a range of text in the Typst document using CodeMirror transaction (preserves undo/redo)",
+    "Replace a range of text in a document file using CodeMirror transaction (preserves undo/redo). Use this to modify content in .typ or .bib files.",
   inputSchema: z.object({
+    filePath: z
+      .string()
+      .describe("Path to the file to edit (e.g., 'main.typ', 'refs.bib')"),
     oldContent: z.string().describe("Existing content to be replaced"),
     newContent: z
       .string()

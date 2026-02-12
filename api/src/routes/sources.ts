@@ -8,8 +8,9 @@ import { db, schema, eq, and } from "@/database";
 import { authMiddleware } from "@/middleware/auth";
 import { scrapeUrl } from "@/services/firecrawl";
 import { generateEmbedding } from "@/lib/embeddings";
-import { buildSourceInsert } from "@/tools/add-source";
+import { detectSourceType } from "@/utils/source-detection";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
+import type { NewSource } from "@/database/schema/sources";
 
 const { documents, sources } = schema;
 
@@ -91,7 +92,7 @@ sourcesRouter.post("/:documentId", async (c) => {
         }
 
         // Step 4: Build source insert with auto-detected type
-        const sourceInsert = buildSourceInsert({
+        const sourceInsert: NewSource = {
             documentId,
             url,
             citationKey,
@@ -100,7 +101,8 @@ sourcesRouter.post("/:documentId", async (c) => {
             embedding,
             author: scraped.author,
             publicationDate,
-        });
+            sourceType: detectSourceType(url),
+        };
 
         // Step 5: Insert into database
         const [inserted] = await db.insert(sources).values(sourceInsert).returning();

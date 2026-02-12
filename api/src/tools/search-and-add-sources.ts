@@ -5,7 +5,7 @@
 
 import { db, schema } from "@/database";
 import { searchWeb, scrapeUrls } from "@/services/firecrawl";
-import { embedText } from "@/lib/embedding";
+import { generateEmbedding } from "@/lib/embeddings";
 import { buildSourceInsert } from "./add-source";
 import type { Logger } from "pino";
 
@@ -80,7 +80,7 @@ export async function searchAndAddSources(
     for (const scraped of scrapedContent) {
       try {
         // Generate embedding for the content
-        const embedding = await embedText(scraped.content, opLogger);
+        const embedding = await generateEmbedding(scraped.content, opLogger);
 
         // Parse publication date if available
         let publicationDate: Date | undefined;

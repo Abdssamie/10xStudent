@@ -20,7 +20,10 @@ const envSchema = z.object({
   R2_BUCKET_NAME: z.string().min(1),
   R2_PUBLIC_URL: z.url().optional(),
 
-  // Google AI
+  // Voyage AI
+  VOYAGEAI_API_KEY: z.string().min(1),
+
+  // Google AI (optional, kept for backward compatibility)
   GOOGLE_API_KEY: z.string().min(1).optional(),
 
   // Firecrawl

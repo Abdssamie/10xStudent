@@ -7,7 +7,7 @@ import { Hono } from "hono";
 import { db, schema, eq, and } from "@/database";
 import { authMiddleware } from "@/middleware/auth";
 import { scrapeUrl } from "@/services/firecrawl";
-import { embedText } from "@/lib/embedding";
+import { generateEmbedding } from "@/lib/embeddings";
 import { buildSourceInsert } from "@/tools/add-source";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
 
@@ -78,7 +78,7 @@ sourcesRouter.post("/:documentId", async (c) => {
         // Step 2: Generate embedding from content
         let embedding: number[] | undefined;
         if (scraped.content && scraped.content.length > 0) {
-            embedding = await embedText(scraped.content);
+            embedding = await generateEmbedding(scraped.content);
         }
 
         // Step 3: Parse publication date if available

@@ -28,13 +28,13 @@ vi.mock("@/database", async () => {
 });
 
 // Mock the embedding service
-vi.mock("@/lib/embedding", () => ({
-  embedText: vi.fn(),
+vi.mock("@/lib/voyage-embeddings", () => ({
+  generateQueryEmbedding: vi.fn(),
 }));
 
 import { querySources, type SourceResult } from "@/tools/query-sources-rag";
 import { db } from "@/database";
-import { embedText } from "@/lib/embedding";
+import { generateQueryEmbedding } from "@/lib/embeddings";
 
 // Type for the mock query chain
 interface MockQueryChain {
@@ -45,13 +45,13 @@ interface MockQueryChain {
 }
 
 describe("querySources", () => {
-  const mockEmbedding = new Array(768).fill(0.1);
+  const mockEmbedding = new Array(1024).fill(0.1);
   const mockDocumentId = "doc-123";
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Default mock implementation
-    (embedText as Mock).mockResolvedValue(mockEmbedding);
+    (generateQueryEmbedding as Mock).mockResolvedValue(mockEmbedding);
   });
 
   it("returns results sorted by similarity", async () => {
@@ -90,7 +90,7 @@ describe("querySources", () => {
     expect(results[0]!).toHaveProperty("title");
     expect(results[0]!).toHaveProperty("excerpt");
     expect(results[0]!).toHaveProperty("similarity");
-    expect(embedText).toHaveBeenCalledWith("test query", undefined);
+    expect(generateQueryEmbedding).toHaveBeenCalledWith("test query", undefined);
   });
 
   it("filters by documentId correctly", async () => {
@@ -167,9 +167,9 @@ describe("querySources", () => {
     expect(mockQuery.limit).toHaveBeenCalledWith(5);
   });
 
-  it("validates embedding is 768-dimensional number array", async () => {
+  it("validates embedding is 1024-dimensional number array", async () => {
     // Mock invalid embedding (wrong dimensions)
-    (embedText as Mock).mockResolvedValue(new Array(512).fill(0.1));
+    (generateQueryEmbedding as Mock).mockResolvedValue(new Array(512).fill(0.1));
 
     await expect(
       querySources({
@@ -177,15 +177,15 @@ describe("querySources", () => {
         query: "test query",
       }),
     ).rejects.toThrow(
-      "Invalid embedding: expected 768-dimensional number array",
+      "Invalid embedding: expected 1024-dimensional number array",
     );
   });
 
   it("validates embedding contains only numbers", async () => {
     // Mock invalid embedding (contains non-numbers)
-    const invalidEmbedding: unknown[] = new Array(768).fill(0.1);
+    const invalidEmbedding: unknown[] = new Array(1024).fill(0.1);
     invalidEmbedding[0] = "not a number";
-    (embedText as Mock).mockResolvedValue(invalidEmbedding);
+    (generateQueryEmbedding as Mock).mockResolvedValue(invalidEmbedding);
 
     await expect(
       querySources({
@@ -197,9 +197,9 @@ describe("querySources", () => {
 
   it("validates embedding contains no NaN values", async () => {
     // Mock invalid embedding (contains NaN)
-    const invalidEmbedding: number[] = new Array(768).fill(0.1);
+    const invalidEmbedding: number[] = new Array(1024).fill(0.1);
     invalidEmbedding[0] = NaN;
-    (embedText as Mock).mockResolvedValue(invalidEmbedding);
+    (generateQueryEmbedding as Mock).mockResolvedValue(invalidEmbedding);
 
     await expect(
       querySources({
@@ -209,7 +209,7 @@ describe("querySources", () => {
     ).rejects.toThrow("Invalid embedding");
   });
 
-  it("passes contextLogger to embedText", async () => {
+  it("passes contextLogger to generateQueryEmbedding", async () => {
     const mockLogger: Partial<Logger> = { info: vi.fn() };
     const mockQuery: MockQueryChain = {
       from: vi.fn().mockReturnThis(),
@@ -226,7 +226,7 @@ describe("querySources", () => {
       contextLogger: mockLogger as Logger,
     });
 
-    expect(embedText).toHaveBeenCalledWith("test query", mockLogger);
+    expect(generateQueryEmbedding).toHaveBeenCalledWith("test query", mockLogger);
   });
 
   it("filters out sources without embeddings", async () => {

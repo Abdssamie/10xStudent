@@ -4,18 +4,13 @@ import { cors } from 'hono/cors';
 import { appRouter } from './routes/app';
 import { webhooksRouter } from './routes/webhooks';
 
-/**
- * @id: api-server
- * @priority: high
- * @progress: 80
- * @spec: Hono server instance. Configures CORS, Logger, and Base Routes.
- * @skills: ["hono", "typescript"]
- */
-
 const app = new Hono();
 
 app.use('*', logger());
-app.use('*', cors());
+app.use('*', cors({
+    origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true,
+}));
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date() }));
 
@@ -26,7 +21,7 @@ app.route('/webhooks', webhooksRouter);
 app.route('/', appRouter);
 
 export default {
-    port: 3000,
+    port: 3001,
     fetch: app.fetch
 };
 

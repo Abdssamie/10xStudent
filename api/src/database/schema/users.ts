@@ -8,24 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-/**
- * @id: users-schema
- * @priority: high
- * @progress: 100
- * @directive: Implement users table schema with Drizzle ORM including credits system and preferences
- * @context: specs/01-database-api-foundation.md#database-schema
- * @checklist: [
- *   "✅ Define users table with id (Clerk userId), credits, creditsResetAt, preferences, timestamps",
- *   "✅ Set default credits to 10000",
- *   "✅ Add preferences JSONB field for defaultCitationFormat and defaultResearchDepth",
- *   "✅ Add creditsResetAt timestamp for monthly reset tracking",
- *   "✅ Define relations to documents, sources, and credit_logs",
- *   "✅ Export schema and relations for Drizzle ORM"
- * ]
- * @deps: []
- * @skills: ["drizzle-orm", "postgresql", "typescript"]
- */
-
 // User preferences type
 export type UserPreferences = {
   defaultCitationFormat: "APA" | "MLA" | "Chicago";

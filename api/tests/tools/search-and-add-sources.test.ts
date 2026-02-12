@@ -24,8 +24,8 @@ vi.mock("@/services/firecrawl", () => ({
   scrapeUrls: vi.fn(),
 }));
 
-vi.mock("@/lib/embedding", () => ({
-  embedText: vi.fn(),
+vi.mock("@/lib/voyage-embeddings", () => ({
+  generateEmbedding: vi.fn(),
 }));
 
 vi.mock("@/tools/add-source", () => ({
@@ -43,7 +43,7 @@ vi.mock("@/tools/add-source", () => ({
 
 import { searchAndAddSources } from "@/tools/search-and-add-sources";
 import * as firecrawlService from "@/services/firecrawl";
-import * as embeddingService from "@/lib/embedding";
+import * as embeddingService from "@/lib/embeddings";
 import { db } from "@/database";
 
 describe("searchAndAddSources", () => {
@@ -88,8 +88,8 @@ describe("searchAndAddSources", () => {
       },
     ]);
 
-    (embeddingService.embedText as any).mockResolvedValue(
-      new Array(768).fill(0.1)
+    (embeddingService.generateEmbedding as any).mockResolvedValue(
+      new Array(1024).fill(0.1)
     );
 
     const mockReturning = vi.fn().mockResolvedValue([

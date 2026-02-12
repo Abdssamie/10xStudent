@@ -34,7 +34,7 @@ export const sources = pgTable(
       .notNull()
       .defaultNow(),
     content: text("content"), // Extracted text for RAG
-    embedding: vector("embedding", { dimensions: 768 }), // Google text-embedding-004, nullable
+    embedding: vector("embedding", { dimensions: 1024 }), // Voyage AI voyage-4-lite, nullable
     sourceType: text("source_type")
       .$type<SourceType>()
       .notNull()

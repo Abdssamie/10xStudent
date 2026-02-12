@@ -1,6 +1,6 @@
 {
-  "id": "ae8db53c-a7f8-4dcc-9264-d22a0fde41cb",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "04da4623-bac6-48cd-bc15-f5f11a3ae102",
+  "prevId": "6a6758a5-7745-40da-b2f8-8dda3b883b19",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -574,6 +574,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "citation_key": {
+          "name": "citation_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "title": {
           "name": "title",
           "type": "text",
@@ -607,7 +613,7 @@
         },
         "embedding": {
           "name": "embedding",
-          "type": "vector(768)",
+          "type": "vector(1024)",
           "primaryKey": false,
           "notNull": false
         },
@@ -638,6 +644,27 @@
           "columns": [
             {
               "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sources_citation_key_idx": {
+          "name": "sources_citation_key_idx",
+          "columns": [
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "citation_key",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

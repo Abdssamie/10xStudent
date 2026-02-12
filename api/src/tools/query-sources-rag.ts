@@ -6,7 +6,7 @@
 import { db } from "@/database";
 import { sources, type Source } from "@/database";
 import { sql } from "drizzle-orm";
-import { embedText } from "@/lib/embedding.js";
+import { generateQueryEmbedding } from "@/lib/embeddings.js";
 import type { Logger } from "pino";
 
 export interface QuerySourcesInput {
@@ -35,16 +35,16 @@ export async function querySources(
   const { documentId, query, limit = 5, contextLogger } = input;
 
   // Generate embedding for the query
-  const queryEmbedding = await embedText(query, contextLogger);
+  const queryEmbedding = await generateQueryEmbedding(query, contextLogger);
 
-  // Validate embedding is a 768-dimensional number array to prevent SQL injection
+  // Validate embedding is a 1024-dimensional number array to prevent SQL injection
   if (
     !Array.isArray(queryEmbedding) ||
-    queryEmbedding.length !== 768 ||
+    queryEmbedding.length !== 1024 ||
     !queryEmbedding.every((val) => typeof val === "number" && !isNaN(val))
   ) {
     throw new Error(
-      `Invalid embedding: expected 768-dimensional number array, got ${queryEmbedding?.length || 0} dimensions`,
+      `Invalid embedding: expected 1024-dimensional number array, got ${queryEmbedding?.length || 0} dimensions`,
     );
   }
 

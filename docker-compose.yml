@@ -30,24 +30,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  typst:
-    build:
-      context: ./apps/api
-      dockerfile: Dockerfile.typst
-    container_name: 10xstudent-typst
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["tail -f /dev/null"]
-    volumes:
-      - ./fonts:/usr/share/fonts/custom:ro
-      - ./typst-packages:/root/.local/share/typst/packages:ro
-      - ./tmp/typst-workspace:/workspace
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "typst", "--version"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   redis:
     image: redis:7-alpine
     container_name: 10xstudent-redis

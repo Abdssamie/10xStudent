@@ -1,17 +1,17 @@
 import { z } from "zod";
-import { db, schema, eq } from "@/database";
+import { db, schema, eq, asc } from "@/database"; // Added asc for sorting
 
 const { citations, sources } = schema;
 
 export const updateBibliographySchema = z.object({
-  documentId: z.string().uuid(),
+  documentId: z.uuid(), // Explicitly string.uuid()
   format: z.enum(["APA", "MLA", "Chicago"]),
 });
 
 export async function updateBibliographyTool(
   params: z.infer<typeof updateBibliographySchema>,
 ): Promise<{ bibliography: string; sourceCount: number }> {
-  // Get all cited sources
+  
   const citedSources = await db
     .select({
       citationNumber: citations.citationNumber,
@@ -22,27 +22,40 @@ export async function updateBibliographyTool(
     })
     .from(citations)
     .innerJoin(sources, eq(citations.sourceId, sources.id))
-    .where(eq(citations.documentId, params.documentId))
-    .orderBy(citations.citationNumber);
+    .where(eq(citations.documentId, params.documentId));
 
-  // Format bibliography based on citation style
+  if (citedSources.length === 0) {
+    return { bibliography: "\n\n= References\n\nNo sources cited.", sourceCount: 0 };
+  }
+
+  // APA and MLA require alphabetical sorting by author
+  const sortedSources = [...citedSources].sort((a, b) => 
+    (a.author || "Unknown").localeCompare(b.author || "Unknown")
+  );
+
   let bibliography = "\n\n= References\n\n";
 
-  for (const source of citedSources) {
-    if (params.format === "APA") {
-      // APA format: Author. (Year). Title. URL
-      const year = source.publicationDate
-        ? new Date(source.publicationDate).getFullYear()
-        : "n.d.";
-      bibliography += `${source.citationNumber}. ${source.author || "Unknown"}. (${year}). ${source.title}. ${source.url}\n\n`;
-    } else if (params.format === "MLA") {
-      // MLA format: Author. "Title." Website, URL.
-      bibliography += `${source.citationNumber}. ${source.author || "Unknown"}. "${source.title}." ${source.url}\n\n`;
-    } else if (params.format === "Chicago") {
-      // Chicago format: Author. "Title." Accessed date. URL.
-      bibliography += `${source.citationNumber}. ${source.author || "Unknown"}. "${source.title}." ${source.url}\n\n`;
+  for (const source of sortedSources) {
+    const author = source.author || "Unknown";
+    const title = source.title || "Untitled";
+    const url = source.url || "";
+    const year = source.publicationDate ? new Date(source.publicationDate).getFullYear() : "n.d.";
+
+    switch (params.format) {
+      case "APA":
+        // APA: Author, A. A. (Year). Title. URL
+        bibliography += `${author}. (${year}). *${title}*. ${url}\n\n`;
+        break;
+      case "MLA":
+        // MLA: Author. "Title." Website/Publisher, URL.
+        bibliography += `${author}. "${title}." ${url}\n\n`;
+        break;
+      case "Chicago":
+        // Chicago: Author. "Title." Last modified/Published Year. URL.
+        bibliography += `${author}. "${title}." ${year}. ${url}\n\n`;
+        break;
     }
   }
 
-  return { bibliography, sourceCount: citedSources.length };
+  return { bibliography: bibliography.trimEnd(), sourceCount: citedSources.length };
 }

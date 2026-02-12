@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { chat, toServerSentEventsResponse } from "@tanstack/ai";
+import { chat, Tool, toServerSentEventsResponse } from "@tanstack/ai";
 import { geminiText } from "@tanstack/ai-gemini";
 import { serverTools } from "@/lib/tools/server";
 import { insertContentDef, replaceContentDef } from "@/lib/tools/schemas";
@@ -45,7 +45,7 @@ chatRouter.post("/", async (c) => {
   });
 
   // Combine server tools (executable) and client tools (definitions only)
-  const tools = [
+  const tools: Tool[] = [
     ...serverTools,
     insertContentDef, // Client-side tool
     replaceContentDef // Client-side tool

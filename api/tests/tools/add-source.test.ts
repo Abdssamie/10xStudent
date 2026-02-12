@@ -8,7 +8,7 @@ describe("buildSourceInsert", () => {
       url: "https://arxiv.org/abs/123",
       title: "Paper",
       content: "content",
-      embedding: new Array(768).fill(0.1),
+      embedding: new Array(1024).fill(0.1),
     });
 
     expect(insert.sourceType).toBe("journal");
@@ -16,7 +16,7 @@ describe("buildSourceInsert", () => {
     expect(insert.url).toBe("https://arxiv.org/abs/123");
     expect(insert.title).toBe("Paper");
     expect(insert.content).toBe("content");
-    expect(insert.embedding).toHaveLength(768);
+    expect(insert.embedding).toHaveLength(1024);
   });
 
   it("detects source type from URL", () => {
@@ -25,7 +25,7 @@ describe("buildSourceInsert", () => {
       url: "https://example.com/thesis/paper.pdf",
       title: "Thesis",
       content: "content",
-      embedding: new Array(768).fill(0.1),
+      embedding: new Array(1024).fill(0.1),
     });
 
     expect(insert.sourceType).toBe("thesis");
@@ -37,7 +37,7 @@ describe("buildSourceInsert", () => {
       url: "https://example.com/article",
       title: "Article",
       content: "content",
-      embedding: new Array(768).fill(0.1),
+      embedding: new Array(1024).fill(0.1),
       sourceType: "book",
     });
 

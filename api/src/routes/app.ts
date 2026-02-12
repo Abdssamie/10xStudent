@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { authMiddleware } from "@/middleware/auth";
 import { chatRouter } from "./chat";
-import { compileRouter } from "./compile";
 import { creditsRouter } from "./credits";
 import { documentsRouter } from "./documents";
 import { sourcesRouter } from "./sources";
@@ -15,7 +14,6 @@ appRouter.use("/*", authMiddleware);
 
 // Mount chat and compile routes (rate limiting applied in route files)
 appRouter.route("/chat", chatRouter);
-appRouter.route("/compile", compileRouter);
 appRouter.route("/credits", creditsRouter);
 appRouter.route("/documents", documentsRouter);
 appRouter.route("/sources", sourcesRouter);

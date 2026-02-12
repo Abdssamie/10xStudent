@@ -38,8 +38,7 @@ describe("mapSourceTypeToBibTex", () => {
     });
     
     it("should default to misc for unknown types", () => {
-        // @ts-expect-error Testing invalid type
-        expect(mapSourceTypeToBibTex("unknown")).toBe("misc");
+        expect(mapSourceTypeToBibTex("unknown" as any)).toBe("misc");
     });
 });
 

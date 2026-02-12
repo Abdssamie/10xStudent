@@ -52,6 +52,7 @@ CREATE TABLE "sources" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"document_id" uuid NOT NULL,
 	"url" text NOT NULL,
+	"citation_key" text,
 	"title" text,
 	"author" text,
 	"publication_date" timestamp with time zone,
@@ -91,4 +92,5 @@ CREATE INDEX "documents_user_id_idx" ON "documents" USING btree ("user_id");--> 
 CREATE INDEX "documents_created_at_idx" ON "documents" USING btree ("created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "documents_updated_at_idx" ON "documents" USING btree ("updated_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "sources_document_id_idx" ON "sources" USING btree ("document_id");--> statement-breakpoint
+CREATE INDEX "sources_citation_key_idx" ON "sources" USING btree ("document_id","citation_key");--> statement-breakpoint
 CREATE INDEX "users_credits_idx" ON "users" USING btree ("credits");

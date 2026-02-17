@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { chatRouter } from "./chat";
 import { creditsRouter } from "./credits";
 import { documentsRouter } from "./documents";
 import { sourcesRouter } from "./sources";
@@ -12,10 +11,7 @@ export const appRouter = new Hono();
 appRouter.get("/", (c) => c.json({ message: "Welcome to 10xStudent API" }));
 
 
-// Mount chat and compile routes (rate limiting applied in route files)
-appRouter.route(
-  constructApiRoute("/chat"), chatRouter
-);
+// Mount routes (rate limiting applied in route files)
 appRouter.route(
   constructApiRoute("/credits"), creditsRouter
 );

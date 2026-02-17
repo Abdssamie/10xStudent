@@ -3,8 +3,6 @@ import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { appRouter } from './routes/app';
 import { authMiddleware } from './middleware/auth';
-import { constructApiRoute } from './utils/router';
-import { checkAiCreditsMiddleware } from './middleware/credits';
 
 const app = new Hono();
 
@@ -18,10 +16,6 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date() }));
 
 // Protected Routes (with rate limiting)
 appRouter.use("/*", authMiddleware);
-
-appRouter.use(
-  constructApiRoute("/chat/*"), checkAiCreditsMiddleware
-);
 
 // Mount main application router
 app.route('/', appRouter);

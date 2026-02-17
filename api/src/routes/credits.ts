@@ -5,7 +5,7 @@
 
 import { Hono } from "hono";
 import { db, schema, eq } from "@/database";
-import { desc, lt, sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 
 const { users, creditLogs } = schema;
 

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { Webhook } from "svix";
-import { db, schema, eq } from "@/database";
+import { schema, eq } from "@/database";
 import { logger } from "@/utils/logger";
 
 const { users } = schema;
@@ -40,6 +40,9 @@ webhooksRouter.post("/clerk", async (c) => {
     logger.error({ error: err }, "Webhook verification failed");
     return c.json({ error: "Invalid webhook signature" }, 401);
   }
+
+  const services = c.get("services");
+  const db = services.db;
 
   // Handle user.created and user.updated with upsert
   if (event.type === "user.created" || event.type === "user.updated") {

@@ -92,7 +92,7 @@ documentsRouter.patch("/:id", async (c) => {
   const db = services.db;
 
   // Verify document ownership
-  await requireDocumentOwnership(documentId, userId);
+  await requireDocumentOwnership(documentId, userId, db);
 
   const body = await c.req.json();
   const { title, template, citationFormat } = body;
@@ -118,6 +118,9 @@ documentsRouter.delete("/:id", async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
   const documentId = c.req.param("id");
+  const services = c.get("services");
+  const db = services.db;
+  const storageService = services.storageService;
 
   return await Sentry.startSpan(
     { name: "DELETE /documents/:id", op: "http.server" },
@@ -126,7 +129,7 @@ documentsRouter.delete("/:id", async (c) => {
       addOperationBreadcrumb(c, "Deleting document", { documentId });
 
       // Verify ownership and get document
-      const document = await requireDocumentOwnership(documentId, userId);
+      const document = await requireDocumentOwnership(documentId, userId, db);
 
       // Delete from R2 using storage service
       try {

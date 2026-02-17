@@ -4,7 +4,7 @@
  */
 
 import { Hono } from "hono";
-import { db, schema, eq, and } from "@/database";
+import { schema, eq, and } from "@/database";
 import { authMiddleware } from "@/middleware/auth";
 import { scrapeUrl } from "@/services/firecrawl";
 import { generateEmbedding } from "@/lib/embeddings";
@@ -26,6 +26,8 @@ sourcesRouter.post("/:documentId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const documentId = c.req.param("documentId");
+    const services = c.get("services");
+    const db = services.db;
 
     return await Sentry.startSpan(
         { name: "POST /sources/:documentId", op: "http.server" },
@@ -34,7 +36,7 @@ sourcesRouter.post("/:documentId", async (c) => {
             addOperationBreadcrumb(c, "Adding source to document", { documentId });
 
             // Verify document ownership
-            await requireDocumentOwnership(documentId, userId);
+            await requireDocumentOwnership(documentId, userId, db);
 
             // Parse and validate request body
             const body = await c.req.json();
@@ -101,9 +103,11 @@ sourcesRouter.get("/:documentId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const documentId = c.req.param("documentId");
+    const services = c.get("services");
+    const db = services.db;
 
     // Verify document ownership
-    await requireDocumentOwnership(documentId, userId);
+    await requireDocumentOwnership(documentId, userId, db);
 
     const documentSources = await db
         .select({
@@ -126,9 +130,11 @@ sourcesRouter.patch("/:sourceId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const sourceId = c.req.param("sourceId");
+    const services = c.get("services");
+    const db = services.db;
 
     // Verify source ownership
-    await requireSourceOwnership(sourceId, userId);
+    await requireSourceOwnership(sourceId, userId, db);
 
     // Parse and validate request body
     const body = await c.req.json();
@@ -160,9 +166,11 @@ sourcesRouter.delete("/:sourceId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const sourceId = c.req.param("sourceId");
+    const services = c.get("services");
+    const db = services.db;
 
     // Verify source ownership
-    await requireSourceOwnership(sourceId, userId);
+    await requireSourceOwnership(sourceId, userId, db);
 
     await db.delete(sources).where(eq(sources.id, sourceId));
 

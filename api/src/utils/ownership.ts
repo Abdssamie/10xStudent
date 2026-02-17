@@ -3,7 +3,7 @@
  * Provides reusable functions to verify resource ownership and throw appropriate errors
  */
 
-import { db, schema, eq, and } from "@/database";
+import { schema, eq, and, type DB } from "@/database";
 import { NotFoundError } from "@/errors";
 import { logger } from "@/utils/logger";
 
@@ -15,7 +15,8 @@ const { documents, sources } = schema;
  */
 export async function requireDocumentOwnership(
   documentId: string,
-  userId: string
+  userId: string,
+  db: DB
 ) {
   logger.debug(
     { documentId, userId, operation: "verify_document_ownership" },
@@ -44,7 +45,8 @@ export async function requireDocumentOwnership(
  */
 export async function requireSourceOwnership(
   sourceId: string,
-  userId: string
+  userId: string,
+  db: DB
 ) {
   logger.debug(
     { sourceId, userId, operation: "verify_source_ownership" },

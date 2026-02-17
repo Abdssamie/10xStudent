@@ -12,6 +12,7 @@ import { detectSourceType } from "@/utils/source-detection";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
 import type { NewSource } from "@/database/schema/sources";
 import { logger } from "@/utils/logger";
+import { NotFoundError, ValidationError } from "@/errors";
 
 const { documents, sources } = schema;
 
@@ -54,7 +55,7 @@ sourcesRouter.post("/:documentId", async (c) => {
     // Verify document ownership
     const document = await verifyDocumentOwnership(documentId, userId);
     if (!document) {
-        return c.json({ error: "Document not found" }, 404);
+        throw new NotFoundError("Document not found");
     }
 
     // Parse and validate request body
@@ -62,10 +63,7 @@ sourcesRouter.post("/:documentId", async (c) => {
     const parsed = createSourceSchema.safeParse({ ...body, documentId });
 
     if (!parsed.success) {
-        return c.json(
-            { error: "Invalid request", details: parsed.error.message },
-            400
-        );
+        throw new ValidationError("Invalid request", parsed.error.flatten());
     }
 
     const { url, citationKey } = parsed.data;
@@ -108,7 +106,7 @@ sourcesRouter.post("/:documentId", async (c) => {
         return c.json(inserted, 201);
     } catch (error) {
         logger.error({ error, url, documentId }, "Failed to add source");
-        return c.json({ error: "Failed to process source" }, 500);
+        throw error;
     }
 });
 
@@ -121,7 +119,7 @@ sourcesRouter.get("/:documentId", async (c) => {
     // Verify document ownership
     const document = await verifyDocumentOwnership(documentId, userId);
     if (!document) {
-        return c.json({ error: "Document not found" }, 404);
+        throw new NotFoundError("Document not found");
     }
 
     const documentSources = await db
@@ -149,7 +147,7 @@ sourcesRouter.patch("/:sourceId", async (c) => {
     // Verify source ownership
     const source = await verifySourceOwnership(sourceId, userId);
     if (!source) {
-        return c.json({ error: "Source not found" }, 404);
+        throw new NotFoundError("Source not found");
     }
 
     // Parse and validate request body
@@ -157,10 +155,7 @@ sourcesRouter.patch("/:sourceId", async (c) => {
     const parsed = updateSourceSchema.safeParse(body);
 
     if (!parsed.success) {
-        return c.json(
-            { error: "Invalid request", details: parsed.error.message },
-            400
-        );
+        throw new ValidationError("Invalid request", parsed.error.flatten());
     }
 
     // Build update object with only provided fields
@@ -189,7 +184,7 @@ sourcesRouter.delete("/:sourceId", async (c) => {
     // Verify source ownership
     const source = await verifySourceOwnership(sourceId, userId);
     if (!source) {
-        return c.json({ error: "Source not found" }, 404);
+        throw new NotFoundError("Source not found");
     }
 
     await db.delete(sources).where(eq(sources.id, sourceId));

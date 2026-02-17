@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
 import { logger } from '@/utils/logger';
+import { UnauthorizedError } from '@/errors';
 
 declare module 'hono' {
     interface ContextVariableMap {
@@ -20,19 +21,15 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     const authHeader = c.req.header('Authorization');
 
     if (!authHeader?.startsWith('Bearer ')) {
-        return c.json({ 
-            error: 'Unauthorized',
-            message: 'Missing or invalid Authorization header. Expected format: Bearer <token>' 
-        }, 401);
+        throw new UnauthorizedError(
+            'Missing or invalid Authorization header. Expected format: Bearer <token>'
+        );
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     if (!token) {
-        return c.json({ 
-            error: 'Unauthorized',
-            message: 'Token is empty' 
-        }, 401);
+        throw new UnauthorizedError('Token is empty');
     }
 
     try {
@@ -51,11 +48,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
         await next();
     } catch (error) {
         logger.error({ error }, 'Token verification failed');
-        
-        return c.json({ 
-            error: 'Unauthorized',
-            message: 'Invalid or expired token' 
-        }, 401);
+        throw new UnauthorizedError('Invalid or expired token');
     }
 });
 

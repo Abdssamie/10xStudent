@@ -5,6 +5,7 @@ import { authMiddleware } from "@/middleware/auth";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, R2_BUCKET_NAME } from "@/services/r2-client";
 import { logger } from "@/utils/logger";
+import { NotFoundError, ValidationError } from "@/errors";
 
 import { createDocumentSchema } from "@shared/src/document";
 
@@ -21,10 +22,7 @@ documentsRouter.post("/", async (c) => {
   const parsed = createDocumentSchema.safeParse(body);
 
   if (!parsed.success) {
-    return c.json(
-      { error: "Invalid request", details: parsed.error.flatten() },
-      400
-    );
+    throw new ValidationError("Invalid request", parsed.error.flatten());
   }
 
   const { title, template, citationFormat } = parsed.data;
@@ -98,7 +96,7 @@ documentsRouter.patch("/:id", async (c) => {
     .returning();
 
   if (!updated) {
-    return c.json({ error: "Document not found" }, 404);
+    throw new NotFoundError("Document not found");
   }
 
   return c.json(updated);
@@ -117,7 +115,7 @@ documentsRouter.delete("/:id", async (c) => {
     .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
 
   if (!document) {
-    return c.json({ error: "Document not found" }, 404);
+    throw new NotFoundError("Document not found");
   }
 
   // Delete from R2

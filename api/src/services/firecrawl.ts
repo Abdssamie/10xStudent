@@ -5,6 +5,7 @@
 
 import pino from "pino";
 import { env } from "@/config/env";
+import { AppError } from "@/errors";
 
 // Initialize logger for Firecrawl service
 const logger = pino({
@@ -111,8 +112,11 @@ export async function searchWeb(
         },
         "Firecrawl search API error",
       );
-      throw new Error(
-        `Firecrawl search failed: ${response.status} ${errorText}`,
+      throw new AppError(
+        `Firecrawl search failed: ${response.status}`,
+        502,
+        "EXTERNAL_API_ERROR",
+        { service: "firecrawl", statusCode: response.status, error: errorText }
       );
     }
 
@@ -165,7 +169,11 @@ export async function scrapeUrl(
   });
 
   if (!env.FIRECRAWL_API_KEY) {
-    throw new Error("FIRECRAWL_API_KEY not configured");
+    throw new AppError(
+      "FIRECRAWL_API_KEY not configured",
+      500,
+      "CONFIGURATION_ERROR"
+    );
   }
 
   try {
@@ -193,15 +201,23 @@ export async function scrapeUrl(
         },
         "Firecrawl scrape API error",
       );
-      throw new Error(
-        `Firecrawl scrape failed: ${response.status} ${errorText}`,
+      throw new AppError(
+        `Firecrawl scrape failed: ${response.status}`,
+        502,
+        "EXTERNAL_API_ERROR",
+        { service: "firecrawl", statusCode: response.status, error: errorText }
       );
     }
 
     const data = (await response.json()) as unknown as FirecrawlResponse;
 
     if (!data.success || Array.isArray(data.data)) {
-      throw new Error("Invalid scrape response format");
+      throw new AppError(
+        "Invalid scrape response format",
+        502,
+        "EXTERNAL_API_ERROR",
+        { service: "firecrawl" }
+      );
     }
 
     const metadata = data.data.metadata || {};

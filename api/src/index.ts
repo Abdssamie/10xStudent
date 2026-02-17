@@ -3,6 +3,7 @@ import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { appRouter } from './routes/app';
 import { authMiddleware } from './middleware/auth';
+import { errorHandler } from './middleware/error-handler';
 
 const app = new Hono();
 
@@ -20,8 +21,10 @@ appRouter.use("/*", authMiddleware);
 // Mount main application router
 app.route('/', appRouter);
 
+// Error handling middleware (must be last)
+app.onError(errorHandler);
+
 export default {
     port: 3001,
     fetch: app.fetch
 };
-

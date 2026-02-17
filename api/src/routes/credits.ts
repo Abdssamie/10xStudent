@@ -6,6 +6,7 @@
 import { Hono } from "hono";
 import { db, schema, eq } from "@/database";
 import { desc, sql } from "drizzle-orm";
+import { NotFoundError } from "@/errors";
 
 const { users, creditLogs } = schema;
 
@@ -25,7 +26,7 @@ creditsRouter.get("/", async (c) => {
         .where(eq(users.id, userId));
 
     if (!user) {
-        return c.json({ error: "User not found" }, 404);
+        throw new NotFoundError("User not found");
     }
 
     // Calculate usage this month (since last reset)

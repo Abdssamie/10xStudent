@@ -4,6 +4,7 @@
  */
 
 import sanitize from "sanitize-filename";
+import { ValidationError } from "@/errors";
 
 /**
  * UUID validation regex - accepts any valid UUID format (v1, v4, v5, v7)
@@ -18,7 +19,7 @@ const UUID_REGEX =
  */
 export function validateUserId(userId: string): void {
   if (!UUID_REGEX.test(userId)) {
-    throw new Error("Invalid userId format: must be a valid UUID");
+    throw new ValidationError("Invalid userId format: must be a valid UUID");
   }
 }
 
@@ -29,7 +30,7 @@ export function validateUserId(userId: string): void {
  */
 export function validateDocumentId(documentId: string): void {
   if (!UUID_REGEX.test(documentId)) {
-    throw new Error("Invalid documentId format: must be a valid UUID");
+    throw new ValidationError("Invalid documentId format: must be a valid UUID");
   }
 }
 
@@ -46,14 +47,14 @@ export function validateDocumentId(documentId: string): void {
  */
 export function sanitizeFilename(filename: string): string {
   if (!filename || filename.length === 0) {
-    throw new Error("Filename cannot be empty");
+    throw new ValidationError("Filename cannot be empty");
   }
 
   const sanitized = sanitize(filename);
 
   // sanitize-filename can return empty string for certain inputs (e.g., "..", ".")
   if (!sanitized || sanitized.length === 0) {
-    throw new Error("Filename cannot be empty after sanitization");
+    throw new ValidationError("Filename cannot be empty after sanitization");
   }
 
   return sanitized;

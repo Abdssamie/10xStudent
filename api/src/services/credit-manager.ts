@@ -1,4 +1,5 @@
 import { DB, schema, eq, sql } from "@/database";
+import { NotFoundError, InsufficientCreditsError } from "@/errors";
 
 const { users, creditLogs } = schema;
 
@@ -30,12 +31,13 @@ export class CreditManager {
         .for("update");
 
       if (!user) {
-        throw new Error("User not found");
+        throw new NotFoundError("User not found");
       }
 
       if (user.credits < estimatedCost) {
-        throw new Error(
+        throw new InsufficientCreditsError(
           `Insufficient credits. Have: ${user.credits}, Need: ${estimatedCost}`,
+          { available: user.credits, required: estimatedCost }
         );
       }
 

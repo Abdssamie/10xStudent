@@ -7,8 +7,14 @@ import { appRouter } from './routes/app';
 import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { sentryContext } from './middleware/sentry-context';
+import { createServicesMiddleware } from './middleware/services';
+import { createServiceContainer } from './services/container';
+import { db } from './database';
 
 const app = new Hono();
+
+// Create service container
+const services = createServiceContainer(db);
 
 app.use('*', logger());
 app.use('*', cors({
@@ -18,32 +24,16 @@ app.use('*', cors({
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date() }));
 
-// Protected Routes (with rate limiting)
+// Protected Routes (with auth, services, and Sentry context)
 appRouter.use("/*", authMiddleware);
+appRouter.use("/*", createServicesMiddleware(services));
 appRouter.use("/*", sentryContext);
 
 // Mount main application router
 app.route('/', appRouter);
 
 // Error handling middleware (must be last)
-app.onError((err, c) => {
-  // Capture error in Sentry before formatting response
-  Sentry.captureException(err, {
-    contexts: {
-      request: {
-        method: c.req.method,
-        url: c.req.url,
-        headers: Object.fromEntries(c.req.raw.headers.entries()),
-      },
-    },
-    user: c.get('auth')?.userId ? {
-      id: c.get('auth').userId,
-    } : undefined,
-  });
-
-  // Let error-handler middleware format the response
-  return errorHandler(err, c);
-});
+app.onError(errorHandler);
 
 export default {
     port: 3001,

@@ -1,12 +1,11 @@
 import { Hono } from "hono";
-import { db, schema, eq, and } from "@/database";
+import { schema, eq, and } from "@/database";
 import { authMiddleware } from "@/middleware/auth";
 import { logger } from "@/utils/logger";
 import { NotFoundError, ValidationError } from "@/errors";
 import { Sentry } from "@/lib/sentry";
 import { addOperationBreadcrumb, setOperationTags } from "@/middleware/sentry-context";
 import { requireDocumentOwnership } from "@/utils/ownership";
-import { createStorageService } from "@/services/storage";
 
 import { createDocumentSchema } from "@shared/src/document";
 
@@ -14,13 +13,13 @@ const { documents } = schema;
 
 export const documentsRouter = new Hono();
 
-// Initialize storage service
-const storageService = createStorageService();
-
 // POST /documents - Create a new document
 documentsRouter.post("/", async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
+  const services = c.get("services");
+  const db = services.db;
+  const storageService = services.storageService;
 
   return await Sentry.startSpan(
     { name: "POST /documents", op: "http.server" },
@@ -73,6 +72,8 @@ documentsRouter.post("/", async (c) => {
 documentsRouter.get("/", async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
+  const services = c.get("services");
+  const db = services.db;
 
   const userDocuments = await db
     .select()
@@ -87,6 +88,8 @@ documentsRouter.patch("/:id", async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
   const documentId = c.req.param("id");
+  const services = c.get("services");
+  const db = services.db;
 
   // Verify document ownership
   await requireDocumentOwnership(documentId, userId);

@@ -2,6 +2,7 @@ import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
 import { logger } from '@/utils/logger';
 import { UnauthorizedError } from '@/errors';
+import type { ServiceContainer } from '@/services/container';
 
 declare module 'hono' {
     interface ContextVariableMap {
@@ -10,6 +11,7 @@ declare module 'hono' {
             sessionId: string;
             orgId?: string;
         };
+        services: ServiceContainer;
     }
 }
 

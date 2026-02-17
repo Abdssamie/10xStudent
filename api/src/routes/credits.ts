@@ -4,7 +4,7 @@
  */
 
 import { Hono } from "hono";
-import { db, schema, eq } from "@/database";
+import { schema, eq } from "@/database";
 import { desc, sql } from "drizzle-orm";
 import { NotFoundError } from "@/errors";
 import { Sentry } from "@/lib/sentry";
@@ -18,6 +18,8 @@ export const creditsRouter = new Hono();
 creditsRouter.get("/", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
+    const services = c.get("services");
+    const db = services.db;
 
     return await Sentry.startSpan(
         { name: "GET /credits", op: "http.server" },
@@ -60,6 +62,8 @@ creditsRouter.get("/", async (c) => {
 creditsRouter.get("/history", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
+    const services = c.get("services");
+    const db = services.db;
 
     // Pagination params
     const cursor = c.req.query("cursor");

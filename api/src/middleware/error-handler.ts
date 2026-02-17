@@ -5,6 +5,7 @@
 
 import { Context } from "hono";
 import { ZodError } from "zod";
+import { Sentry } from "@/lib/sentry";
 import { AppError } from "@/errors";
 import { logger } from "@/utils/logger";
 import { env } from "@/config/env";
@@ -69,6 +70,50 @@ function handleDatabaseError(error: unknown): {
 }
 
 /**
+ * Report error to Sentry if enabled
+ * Only reports operational errors and 5xx errors
+ */
+function reportToSentry(err: Error, context: Record<string, unknown>, statusCode: number): void {
+  if (!env.SENTRY_DSN) {
+    return;
+  }
+
+  // Don't report 4xx client errors (except 429 rate limit)
+  if (statusCode >= 400 && statusCode < 500 && statusCode !== 429) {
+    return;
+  }
+
+  // For AppError, only report operational errors
+  if (err instanceof AppError && !err.isOperational) {
+    return;
+  }
+
+  // Set user context if available
+  if (context.userId) {
+    Sentry.setUser({ id: context.userId as string });
+  }
+
+  // Set fingerprint for better error grouping
+  const fingerprint = err instanceof AppError 
+    ? [err.code, context.path as string]
+    : ["{{ default }}", context.path as string];
+
+  // Capture exception
+  Sentry.captureException(err, {
+    level: statusCode >= 500 ? "error" : "warning",
+    fingerprint,
+    tags: {
+      statusCode: statusCode.toString(),
+      path: context.path as string,
+      method: context.method as string,
+    },
+    contexts: {
+      request: context,
+    },
+  });
+}
+
+/**
  * Error handling middleware for Hono
  * Must be registered as the last middleware in the chain
  */
@@ -94,13 +139,16 @@ export async function errorHandler(err: Error, c: Context) {
       "Application error"
     );
 
+    // Report to Sentry
+    reportToSentry(err, requestContext, err.statusCode);
+
     const responseBody: Record<string, unknown> = {
       error: err.code,
       message: err.message,
     };
 
     if (err.details) {
-      responseBody.details = err.details;
+   responseBody.details = err.details;
     }
 
     if (env.NODE_ENV === "development") {
@@ -144,6 +192,9 @@ export async function errorHandler(err: Error, c: Context) {
       "Database error"
     );
 
+    // Report to Sentry
+    reportToSentry(err, requestContext, dbError.statusCode);
+
     return c.json(
       {
         error: dbError.code,
@@ -163,6 +214,9 @@ export async function errorHandler(err: Error, c: Context) {
     },
     "Unhandled error"
   );
+
+  // Report to Sentry
+  reportToSentry(err, requestContext, 500);
 
   // Don't leak internal error details in production
   const message =

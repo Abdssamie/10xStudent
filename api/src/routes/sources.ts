@@ -12,7 +12,7 @@ import { detectSourceType } from "@/utils/source-detection";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
 import type { NewSource } from "@/database/schema/sources";
 import { logger } from "@/utils/logger";
-import { NotFoundError, ValidationError } from "@/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import { Sentry } from "@/lib/sentry";
 import { addOperationBreadcrumb, setOperationTags } from "@/middleware/sentry-context";
 import { requireDocumentOwnership, requireSourceOwnership } from "@/utils/ownership";

@@ -132,7 +132,8 @@ describe("AgentService Integration Tests", () => {
       
       const mockStream = async function* () {
         yield { type: "TEXT_MESSAGE_CONTENT", text: "Essay..." };
-               type: "RUN_FINISHED",
+        yield {
+          type: "RUN_FINISHED",
           usage: { promptTokens: 1000, completionTokens: 2000, totalTokens: 3000 },
           finishReason: "stop",
         };

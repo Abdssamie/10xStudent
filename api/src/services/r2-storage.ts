@@ -4,7 +4,7 @@
  */
 
 import sanitize from "sanitize-filename";
-import { ValidationError } from "@/errors";
+import { ValidationError } from "@/lib/errors";
 
 /**
  * UUID validation regex - accepts any valid UUID format (v1, v4, v5, v7)

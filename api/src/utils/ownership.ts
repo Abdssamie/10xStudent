@@ -4,7 +4,7 @@
  */
 
 import { schema, eq, and, type DB } from "@/database";
-import { NotFoundError } from "@/errors";
+import { NotFoundError } from "@/lib/errors";
 import { logger } from "@/utils/logger";
 
 const { documents, sources } = schema;

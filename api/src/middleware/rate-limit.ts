@@ -6,7 +6,7 @@
 import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
 import type Redis from "ioredis";
-import { TooManyRequestsError } from "../errors/index.js";
+import { TooManyRequestsError } from "@/lib/errors/index.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
@@ -51,8 +51,23 @@ export function createRateLimitMiddleware(
       return;
     }
 
-    // Generate rate limit key
-    const key = `${keyPrefix}:${userId || "anonymous"}`;
+    // CRITICAL: If we reach here without a userId, skip rate limiting
+    // We should NEVER use a shared "anonymous" key as it would cause
+    // all anonymous users to share the same rate limit bucket
+    if (!userId) {
+      logger.warn(
+        {
+          path: c.req.path,
+          method: c.req.method,
+        },
+        "Rate limiting skipped - no user ID available"
+      );
+      await next();
+      return;
+    }
+
+    // Generate rate limit key (userId is guaranteed to exist here)
+    const key = `${keyPrefix}:${userId}`;
     const now = Date.now();
     const windowStart = now - windowMs;
 

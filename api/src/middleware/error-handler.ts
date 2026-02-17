@@ -6,7 +6,7 @@
 import { Context } from "hono";
 import { ZodError } from "zod";
 import { Sentry } from "@/lib/sentry";
-import { AppError } from "@/errors";
+import { AppError } from "@/lib/errors";
 import { logger } from "@/utils/logger";
 import { env } from "@/config/env";
 
@@ -72,6 +72,9 @@ function handleDatabaseError(error: unknown): {
 /**
  * Report error to Sentry if enabled
  * Only reports operational errors and 5xx errors
+ * 
+ * Note: User context is already set by sentryContext middleware,
+ * so we don't need to set it again here.
  */
 function reportToSentry(err: Error, context: Record<string, unknown>, statusCode: number): void {
   if (!env.SENTRY_DSN) {
@@ -88,27 +91,18 @@ function reportToSentry(err: Error, context: Record<string, unknown>, statusCode
     return;
   }
 
-  // Set user context if available
-  if (context.userId) {
-    Sentry.setUser({ id: context.userId as string });
-  }
-
   // Set fingerprint for better error grouping
   const fingerprint = err instanceof AppError 
     ? [err.code, context.path as string]
     : ["{{ default }}", context.path as string];
 
   // Capture exception
+  // User context, tags, and breadcrumbs are already set by sentryContext middleware
   Sentry.captureException(err, {
     level: statusCode >= 500 ? "error" : "warning",
     fingerprint,
     tags: {
       statusCode: statusCode.toString(),
-      path: context.path as string,
-      method: context.method as string,
-    },
-    contexts: {
-      request: context,
     },
   });
 }

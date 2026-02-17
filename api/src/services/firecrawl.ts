@@ -5,7 +5,7 @@
 
 import pino from "pino";
 import { env } from "@/config/env";
-import { AppError } from "@/errors";
+import { AppError } from "@/lib/errors";
 
 // Initialize logger for Firecrawl service
 const logger = pino({

@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Hono } from "hono";
 import type Redis from "ioredis";
 import { createRateLimitMiddleware } from "../../src/middleware/rate-limit";
-import { TooManyRequestsError } from "../../src/errors";
+import { TooManyRequestsError } from "../../src/lib/errors";
 
 // Mock Redis client
 const createMockRedis = () => {
@@ -86,6 +86,12 @@ describe("Rate Limiting Middleware", () => {
   });
 
   it("should allow requests within rate limit", async () => {
+    // Mock auth context FIRST (middleware order matters!)
+    app.use("*", async (c, next) => {
+      c.set("auth", { userId: "user123", sessionId: "session123" });
+      await next();
+    });
+
     const rateLimiter = createRateLimitMiddleware(mockRedis, {
       windowMs: 60000,
       maxRequests: 5,
@@ -95,12 +101,6 @@ describe("Rate Limiting Middleware", () => {
 
     app.use("*", rateLimiter);
     app.get("/test", (c) => c.json({ success: true }));
-
-    // Mock auth context
-    app.use("*", async (c, next) => {
-      c.set("auth", { userId: "user123", sessionId: "session123" });
-      await next();
-    });
 
     const res = await app.request("/test");
     expect(res.status).toBe(200);

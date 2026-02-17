@@ -131,7 +131,7 @@ describe("Database Schema Integration Tests", () => {
       expect(columns).toContainEqual({ name: "id", type: "text", nullable: false });
       expect(columns).toContainEqual({ name: "document_id", type: "text", nullable: false });
       expect(columns).toContainEqual({ name: "role", type: "text", nullable: false });
-      es).toContainEqual({ name: "content", type: "text", nullable: false });
+      expect(columns).toContainEqual({ name: "content", type: "text", nullable: false });
     });
   });
 
@@ -176,7 +176,7 @@ describe("Database Schema Integration Tests", () => {
       `;
 
       expect(result).toHaveLength(1);
-      expect(result[0]?.foreign_table_name).documents");
+      expect(result[0]?.foreign_table_name).toBe("documents");
       expect(result[0]?.foreign_column_name).toBe("id");
     });
 

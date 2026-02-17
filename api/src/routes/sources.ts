@@ -15,38 +15,11 @@ import { logger } from "@/utils/logger";
 import { NotFoundError, ValidationError } from "@/errors";
 import { Sentry } from "@/lib/sentry";
 import { addOperationBreadcrumb, setOperationTags } from "@/middleware/sentry-context";
+import { requireDocumentOwnership, requireSourceOwnership } from "@/utils/ownership";
 
 const { documents, sources } = schema;
 
 export const sourcesRouter = new Hono();
-
-/**
- * Verify that a document belongs to the authenticated user.
- * Returns the document if owned, null otherwise.
- */
-async function verifyDocumentOwnership(documentId: string, userId: string) {
-    const [document] = await db
-        .select()
-        .from(documents)
-        .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
-    return document || null;
-}
-
-/**
- * Verify source ownership via its parent document.
- * Returns the source if owned, null otherwise.
- */
-async function verifySourceOwnership(sourceId: string, userId: string) {
-    const [source] = await db
-        .select({
-            source: sources,
-            documentUserId: documents.userId,
-        })
-        .from(sources)
-        .innerJoin(documents, eq(sources.documentId, documents.id))
-        .where(and(eq(sources.id, sourceId), eq(documents.userId, userId)));
-    return source?.source || null;
-}
 
 // POST /sources/:documentId - Add a source by URL
 sourcesRouter.post("/:documentId", async (c) => {
@@ -61,10 +34,7 @@ sourcesRouter.post("/:documentId", async (c) => {
             addOperationBreadcrumb(c, "Adding source to document", { documentId });
 
             // Verify document ownership
-            const document = await verifyDocumentOwnership(documentId, userId);
-            if (!document) {
-                throw new NotFoundError("Document not found");
-            }
+            await requireDocumentOwnership(documentId, userId);
 
             // Parse and validate request body
             const body = await c.req.json();
@@ -133,10 +103,7 @@ sourcesRouter.get("/:documentId", async (c) => {
     const documentId = c.req.param("documentId");
 
     // Verify document ownership
-    const document = await verifyDocumentOwnership(documentId, userId);
-    if (!document) {
-        throw new NotFoundError("Document not found");
-    }
+    await requireDocumentOwnership(documentId, userId);
 
     const documentSources = await db
         .select({
@@ -161,10 +128,7 @@ sourcesRouter.patch("/:sourceId", async (c) => {
     const sourceId = c.req.param("sourceId");
 
     // Verify source ownership
-    const source = await verifySourceOwnership(sourceId, userId);
-    if (!source) {
-        throw new NotFoundError("Source not found");
-    }
+    await requireSourceOwnership(sourceId, userId);
 
     // Parse and validate request body
     const body = await c.req.json();
@@ -198,10 +162,7 @@ sourcesRouter.delete("/:sourceId", async (c) => {
     const sourceId = c.req.param("sourceId");
 
     // Verify source ownership
-    const source = await verifySourceOwnership(sourceId, userId);
-    if (!source) {
-        throw new NotFoundError("Source not found");
-    }
+    await requireSourceOwnership(sourceId, userId);
 
     await db.delete(sources).where(eq(sources.id, sourceId));
 

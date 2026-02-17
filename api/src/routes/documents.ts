@@ -8,6 +8,7 @@ import { logger } from "@/utils/logger";
 import { NotFoundError, ValidationError } from "@/errors";
 import { Sentry } from "@/lib/sentry";
 import { addOperationBreadcrumb, setOperationTags } from "@/middleware/sentry-context";
+import { requireDocumentOwnership } from "@/utils/ownership";
 
 import { createDocumentSchema } from "@shared/src/document";
 
@@ -91,6 +92,9 @@ documentsRouter.patch("/:id", async (c) => {
   const userId = auth.userId;
   const documentId = c.req.param("id");
 
+  // Verify document ownership
+  await requireDocumentOwnership(documentId, userId);
+
   const body = await c.req.json();
   const { title, template, citationFormat } = body;
 
@@ -100,16 +104,12 @@ documentsRouter.patch("/:id", async (c) => {
   if (template !== undefined) updates.template = template;
   if (citationFormat !== undefined) updates.citationFormat = citationFormat;
 
-  // Update document (only if owned by user)
+  // Update document
   const [updated] = await db
     .update(documents)
     .set(updates)
-    .where(and(eq(documents.id, documentId), eq(documents.userId, userId)))
+    .where(eq(documents.id, documentId))
     .returning();
-
-  if (!updated) {
-    throw new NotFoundError("Document not found");
-  }
 
   return c.json(updated);
 });
@@ -126,15 +126,8 @@ documentsRouter.delete("/:id", async (c) => {
       setOperationTags(c, { operation: "delete_document", documentId });
       addOperationBreadcrumb(c, "Deleting document", { documentId });
 
-      // Get document to retrieve R2 key
-      const [document] = await db
-        .select()
-        .from(documents)
-        .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
-
-      if (!document) {
-        throw new NotFoundError("Document not found");
-      }
+      // Verify ownership and get document to retrieve R2 key
+      const document = await requireDocumentOwnership(documentId, userId);
 
       // Delete from R2
       try {

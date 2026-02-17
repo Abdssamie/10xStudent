@@ -7,11 +7,6 @@ import { Hono } from "hono";
 import { schema, eq } from "@/database";
 import { desc, sql } from "drizzle-orm";
 import { NotFoundError } from "@/lib/errors";
-import { Sentry } from "@/lib/sentry";
-import {
-  addOperationBreadcrumb,
-  setOperationTags,
-} from "@/middleware/sentry-context";
 
 const { users, creditLogs } = schema;
 
@@ -24,41 +19,33 @@ creditsRouter.get("/", async (c) => {
   const services = c.get("services");
   const db = services.db;
 
-  return await Sentry.startSpan(
-    { name: "GET /credits", op: "http.server" },
-    async () => {
-      addOperationBreadcrumb(c, "Fetching user credit balance");
-      setOperationTags(c, { operation: "get_credits" });
+  const [user] = await db
+    .select({
+      balance: users.credits,
+      creditsResetAt: users.creditsResetAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId));
 
-      const [user] = await db
-        .select({
-          balance: users.credits,
-          creditsResetAt: users.creditsResetAt,
-        })
-        .from(users)
-        .where(eq(users.id, userId));
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
 
-      if (!user) {
-        throw new NotFoundError("User not found");
-      }
+  // Calculate usage this month (since last reset)
+  const [usage] = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${creditLogs.cost}), 0)`,
+    })
+    .from(creditLogs)
+    .where(
+      sql`${creditLogs.userId} = ${userId} AND ${creditLogs.timestamp} >= ${user.creditsResetAt}`,
+    );
 
-      // Calculate usage this month (since last reset)
-      const [usage] = await db
-        .select({
-          total: sql<number>`COALESCE(SUM(${creditLogs.cost}), 0)`,
-        })
-        .from(creditLogs)
-        .where(
-          sql`${creditLogs.userId} = ${userId} AND ${creditLogs.timestamp} >= ${user.creditsResetAt}`,
-        );
-
-      return c.json({
-        balance: user.balance,
-        creditsResetAt: user.creditsResetAt,
-        usedThisMonth: usage?.total ?? 0,
-      });
-    },
-  );
+  return c.json({
+    balance: user.balance,
+    creditsResetAt: user.creditsResetAt,
+    usedThisMonth: usage?.total ?? 0,
+  });
 });
 
 // GET /credits/history - Get paginated transaction log

@@ -1,3 +1,7 @@
+// TODO: Add integration tests for BibTeX generation
+// - Test with real database (TestContainers PostgreSQL)
+// - Test actual file export and compilation with Typst
+// - Test bibliography generation with complex source hierarchies
 import { describe, it, expect } from "vitest";
 import { generateBibTex, mapSourceTypeToBibTex } from "./bibtex";
 import { type Source } from "@/database/schema/sources";

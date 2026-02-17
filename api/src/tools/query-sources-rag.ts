@@ -4,7 +4,7 @@
  */
 
 import { db } from "@/database";
-import { sources, type Source } from "@/database";
+import { sources, } from "@/database";
 import { sql } from "drizzle-orm";
 import { generateQueryEmbedding } from "@/lib/embeddings.js";
 import type { Logger } from "pino";

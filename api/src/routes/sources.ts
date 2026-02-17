@@ -16,9 +16,6 @@ const { documents, sources } = schema;
 
 export const sourcesRouter = new Hono();
 
-// Apply auth middleware to all routes
-sourcesRouter.use("/*", authMiddleware);
-
 /**
  * Verify that a document belongs to the authenticated user.
  * Returns the document if owned, null otherwise.
@@ -65,7 +62,7 @@ sourcesRouter.post("/:documentId", async (c) => {
 
     if (!parsed.success) {
         return c.json(
-            { error: "Invalid request", details: parsed.error.flatten() },
+            { error: "Invalid request", details: parsed.error.message },
             400
         );
     }
@@ -160,7 +157,7 @@ sourcesRouter.patch("/:sourceId", async (c) => {
 
     if (!parsed.success) {
         return c.json(
-            { error: "Invalid request", details: parsed.error.flatten() },
+            { error: "Invalid request", details: parsed.error.message },
             400
         );
     }

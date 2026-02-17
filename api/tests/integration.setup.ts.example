@@ -1,0 +1,39 @@
+// TODO: Integration Test Setup with TestContainers
+// This file will set up PostgreSQL and Redis containers for integration tests
+
+import { PostgreSqlContainer } from "@testcontainers/postgresql";
+import { GenericContainer } from "testcontainers";
+import { execSync } from "child_process";
+
+// Global setup - runs once before all tests
+export async function setup() {
+  // Start PostgreSQL container
+  const postgresContainer = await new PostgreSqlContainer()
+    .withDatabase("test_db")
+    .withUsername("test")
+    .withPassword("test")
+    .start();
+
+  // Start Redis container  
+  const redisContainer = await new GenericContainer("redis:7-alpine")
+    .withExposedPorts(6379)
+    .start();
+
+  // Set environment variables for tests
+  process.env.DATABASE_URL = postgresContainer.getConnectionUri();
+  process.env.REDIS_URL = `redis://${redisContainer.getHost()}:${redisContainer.getMappedPort(6379)}`;
+
+  // Run migrations
+  execSync("bun run db:migrate", { env: process.env });
+
+  // Store containers for teardown
+  global.__POSTGRES_CONTAINER__ = postgresContainer;
+  global.__REDIS_CONTAINER__ = redisContainer;
+}
+
+// Global teardown - runs once after all tests
+export async function teardown() {
+  // Stop containers
+  await global.__POSTGRES_CONTAINER__?.stop();
+  await global.__REDIS_CONTAINER__?.stop();
+}

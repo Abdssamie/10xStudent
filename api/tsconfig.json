@@ -39,6 +39,8 @@
     "../shared/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "tests/integration.setup.ts",
+    "tests/**/*.integration.test.ts"
   ]
 }

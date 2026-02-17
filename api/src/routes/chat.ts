@@ -1,9 +1,4 @@
 import { Hono } from "hono";
-import { chat, Tool, toServerSentEventsResponse } from "@tanstack/ai";
-import { geminiText } from "@tanstack/ai-gemini";
-import { serverTools } from "@/lib/tools/server";
-import { insertContentDef, replaceContentDef } from "@/lib/tools/schemas";
-import { env } from "@/config/env";
 
 export const chatRouter = new Hono();
 
@@ -37,25 +32,5 @@ Remember: Citation accuracy is paramount. Never cite a source that was not provi
 }
 
 chatRouter.post("/", async (c) => {
-  const { messages } = await c.req.json();
-
-  // Initialize Gemini adapter
-  const adapter = geminiText("gemini-3-flash-preview", {
-    apiKey: env.GOOGLE_API_KEY
-  });
-
-  // Combine server tools (executable) and client tools (definitions only)
-  const tools: Tool[] = [
-    ...serverTools,
-    insertContentDef, // Client-side tool
-    replaceContentDef // Client-side tool
-  ];
-
-  const stream = chat({
-    adapter,
-    messages,
-    tools,
-  });
-
-  return toServerSentEventsResponse(stream);
+  
 });

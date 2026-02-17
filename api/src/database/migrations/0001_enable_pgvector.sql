@@ -1,19 +1,3 @@
-/**
- * @id: pgvector-migration
- * @priority: high
- * @progress: 100
- * @directive: Create SQL migration to enable pgvector extension and create vector similarity index
- * @context: specs/01-database-api-foundation.md#pgvector-migration
- * @checklist: [
- *   "✅ Enable pgvector extension",
- *   "✅ Create vector similarity index using ivfflat for cosine similarity",
- *   "✅ Configure index parameters (lists = 100 for <1M vectors)",
- *   "✅ Add note about HNSW index for production with >1M vectors"
- * ]
- * @deps: []
- * @skills: ["postgresql", "pgvector", "sql"]
- */
-
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 

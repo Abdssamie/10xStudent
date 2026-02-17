@@ -6,7 +6,7 @@
  * - 1024-dimensional embeddings for pgvector semantic search
  * - Automatic retry with exponential backoff (built into SDK)
  * - Structured logging with Pino
- * - Input validation and truncation (32k token context)
+ * - Input validation and truncation
  * - Separate functions for documents vs queries (improves retrieval quality)
  */
 
@@ -52,7 +52,7 @@ function getVoyageClient(): VoyageAIClient {
  * Generate a 1024-dimensional embedding vector for document content.
  * Use this when storing documents for retrieval.
  *
- * @param text - The text content to embed (max ~32,000 tokens)
+ * @param text - The text content to embed (token limit unknown, but we did a safe measure to never reach it)
  * @param contextLogger - Optional parent logger for context enrichment
  * @returns Promise resolving to a 1024-dimensional number array
  * @throws {VoyageEmbeddingError} If embedding generation fails
@@ -76,11 +76,11 @@ export async function generateEmbedding(
     throw new VoyageEmbeddingError("Text content cannot be empty", 400);
   }
 
-  // Truncate text if too long (Voyage supports 32k tokens)
-  const truncatedText = text.slice(0, 32000);
-  if (text.length > 32000) {
+  // Truncate text if too long 
+  const truncatedText = text.slice(0, 100000); // roughly 19000 tokens
+  if (text.length > 100000) {
     opLogger.warn(
-      { originalLength: text.length, truncatedLength: 32000 },
+      { originalLength: text.length, truncatedLength: 100000 },
       "Text truncated for embedding",
     );
   }
@@ -90,7 +90,7 @@ export async function generateEmbedding(
 
     const response = await client.embed({
       input: truncatedText,
-      model: "voyage-4-lite",
+      model: "voyage-multilingual-2",
       inputType: "document",
       outputDimension: 1024,
     });
@@ -176,10 +176,10 @@ export async function generateEmbeddingBatch(
     const client = getVoyageClient();
 
     const truncatedTexts = texts.map((text) => {
-      const truncated = text.slice(0, 32000);
-      if (text.length > 32000) {
+      const truncated = text.slice(0, 100000 );
+      if (text.length > 100000) {
         batchLogger.warn(
-          { originalLength: text.length, truncatedLength: 32000 },
+          { originalLength: text.length, truncatedLength: 100000 },
           "Text truncated in batch",
         );
       }

@@ -1,3 +1,7 @@
+// TODO: Add integration tests with real R2/S3 bucket
+// - Test actual file upload/download
+// - Test with real S3-compatible storage (MinIO in TestContainers)
+// - Keep these unit tests for pure functions
 import { describe, it, expect } from "vitest";
 import {
   buildR2Key,

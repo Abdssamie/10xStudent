@@ -6,14 +6,10 @@
 import { Hono } from "hono";
 import { db, schema, eq } from "@/database";
 import { desc, lt, sql } from "drizzle-orm";
-import { authMiddleware } from "@/middleware/auth";
 
 const { users, creditLogs } = schema;
 
 export const creditsRouter = new Hono();
-
-// Apply auth middleware to all routes
-creditsRouter.use("/*", authMiddleware);
 
 // GET /credits - Get user credit balance
 creditsRouter.get("/", async (c) => {

@@ -1,3 +1,8 @@
+// TODO: Add integration tests for chat endpoints
+// - Test with real database (TestContainers PostgreSQL)
+// - Test authentication flow with real Clerk tokens or mock auth server
+// - Test SSE streaming with actual HTTP requests
+// - Test tool execution with real tool implementations
 import { describe, it, expect } from "vitest";
 import { buildSystemPrompt } from "../../src/routes/chat.js";
 

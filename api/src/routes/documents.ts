@@ -11,9 +11,6 @@ const { documents } = schema;
 
 export const documentsRouter = new Hono();
 
-// Apply auth middleware to all routes
-documentsRouter.use("/*", authMiddleware);
-
 // POST /documents - Create a new document
 documentsRouter.post("/", async (c) => {
   const auth = c.get("auth");

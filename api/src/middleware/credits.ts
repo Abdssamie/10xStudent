@@ -4,9 +4,9 @@ import { db, schema, eq } from "@/database";
 const { users } = schema;
 
 /**
- * Check if user has sufficient credits to use AI features
- * @param credits - User's current credit balance
- * @returns true if user can use AI, false otherwise
+ * Check if a user can use AI features based on their credit balance
+ * @param credits - The user's current credit balance
+ * @returns true if user has positive credits, false otherwise
  */
 export function canUseAi(credits: number): boolean {
   return credits > 0;
@@ -35,7 +35,7 @@ export const checkAiCreditsMiddleware = createMiddleware(async (c, next) => {
   }
 
   // Check if user can use AI
-  if (!canUseAi(user.credits)) {
+  if (user.credits <= 0) {
     return c.json(
       {
         error: "Insufficient credits",

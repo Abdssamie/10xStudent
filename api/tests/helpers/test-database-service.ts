@@ -37,6 +37,7 @@ export class TestDatabaseService {
   constructor(connectionString: string) {
     this.client = postgres(connectionString, {
       max: 10, // Limit connection pool size
+      onnotice: () => {}, // Suppress PostgreSQL NOTICE messages (e.g., TRUNCATE CASCADE)
     });
     this.db = drizzle(this.client, { schema });
   }

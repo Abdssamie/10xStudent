@@ -6,7 +6,6 @@ import {
   timestamp,
   index,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 
 // User preferences type
 export type UserPreferences = {

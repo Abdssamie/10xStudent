@@ -5,9 +5,8 @@
 
 import { Hono } from "hono";
 import { schema, eq, and } from "@/database";
-import { authMiddleware } from "@/middleware/auth";
-import { scrapeUrl } from "@/services/firecrawl";
-import { generateEmbedding } from "@/lib/embeddings";
+import { scrapeUrl } from "@/lib/firecrawl";
+import { generateEmbedding } from "@/lib/ai/embeddings";
 import { detectSourceType } from "@/utils/source-detection";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
 import type { NewSource } from "@/database/schema/sources";

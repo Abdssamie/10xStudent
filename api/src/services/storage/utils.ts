@@ -1,5 +1,5 @@
 /**
- * R2 Storage service for Cloudflare R2 (S3-compatible)
+ * R2 Storage Utils for Cloudflare R2 (S3-compatible)
  * Handles file paths and storage operations for Typst documents and assets
  */
 

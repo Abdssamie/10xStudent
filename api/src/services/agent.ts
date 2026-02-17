@@ -1,7 +1,7 @@
 import { chat, Tool, toServerSentEventsResponse } from "@tanstack/ai";
 import { geminiText } from "@tanstack/ai-gemini";
-import { serverTools } from "@/lib/tools/server";
-import { insertContentDef, replaceContentDef } from "@/lib/tools/schemas";
+import { serverTools } from "@/lib/ai/tools/server";
+import { insertContentDef, replaceContentDef } from "@/lib/ai/tools/schemas";
 import { env } from "@/config/env";
 import { ChatMessage } from "@shared/src";
 import { DB } from "@/database";

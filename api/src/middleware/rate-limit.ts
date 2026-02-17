@@ -6,7 +6,7 @@
 import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
 import type Redis from "ioredis";
-import { TooManyRequestsError } from "@/lib/errors/index.js";
+import { TooManyRequestsError } from "@/lib/errors.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
@@ -38,7 +38,6 @@ export function createRateLimitMiddleware(
     windowMs,
     maxRequests,
     keyPrefix = "ratelimit",
-    skipUnauthenticated = true,
   } = options;
 
   return createMiddleware(async (c: Context, next) => {
@@ -46,14 +45,8 @@ export function createRateLimitMiddleware(
     const userId = c.get("auth")?.userId;
 
     // Skip rate limiting for unauthenticated requests if configured
-    if (skipUnauthenticated && !userId) {
-      await next();
-      return;
-    }
-
-    // CRITICAL: If we reach here without a userId, skip rate limiting
-    // We should NEVER use a shared "anonymous" key as it would cause
-    // all anonymous users to share the same rate limit bucket
+    // Todo: Consider using IP-based rate limiting for unauthenticated requests instead of skipping
+    // This might be fine though, as it doesn't mean we allow abuse of our authenticated services
     if (!userId) {
       logger.warn(
         {

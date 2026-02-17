@@ -14,7 +14,7 @@ import {
   buildR2Key,
   buildBibKey,
   buildAssetKey,
-} from "@/services/r2-storage";
+} from "@/services/storage/utils";
 import { logger } from "@/utils/logger";
 import { AppError, NotFoundError } from "@/lib/errors";
 import type { StorageService } from "./interface";

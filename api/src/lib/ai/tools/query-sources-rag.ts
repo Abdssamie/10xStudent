@@ -6,7 +6,7 @@
 import { db } from "@/database";
 import { sources, } from "@/database";
 import { sql } from "drizzle-orm";
-import { generateQueryEmbedding } from "@/lib/embeddings.js";
+import { generateQueryEmbedding } from "@/lib/ai/embeddings.js";
 import type { Logger } from "pino";
 
 export interface QuerySourcesInput {

@@ -1,6 +1,6 @@
 import { searchAndAddSourcesDef, querySourcesRAGDef } from "./schemas";
-import { searchAndAddSources } from "@/tools/search-and-add-sources";
-import { querySources } from "@/tools/query-sources-rag";
+import { searchAndAddSources } from "@/lib/ai/tools/search-and-add-sources";
+import { querySources } from "@/lib/ai/tools/query-sources-rag";
 
 // Server tools with execution logic
 export const searchAndAddSourcesTool = searchAndAddSourcesDef.server(searchAndAddSources);

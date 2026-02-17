@@ -20,7 +20,7 @@ chatRouter.post("/", async (c) => {
   const parsed = chatRequestSchema.safeParse(body);
 
   if (!parsed.success) {
-    throw new ValidationError("Invalid request", parsed.error.flatten());
+    throw new ValidationError("Invalid request", parsed.error.message);
   }
 
   const { messages } = parsed.data;

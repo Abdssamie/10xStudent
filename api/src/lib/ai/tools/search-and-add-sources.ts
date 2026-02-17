@@ -4,8 +4,8 @@
  */
 
 import { db, schema } from "@/database";
-import { searchWeb, scrapeUrls } from "@/services/firecrawl";
-import { generateEmbedding } from "@/lib/embeddings";
+import { searchWeb, scrapeUrls } from "@/lib/firecrawl";
+import { generateEmbedding } from "@/lib/ai/embeddings";
 import { detectSourceType } from "@/utils/source-detection";
 import type { Logger } from "pino";
 import type { NewSource } from "@/database/schema/sources";

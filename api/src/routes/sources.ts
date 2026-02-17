@@ -11,6 +11,7 @@ import { generateEmbedding } from "@/lib/embeddings";
 import { detectSourceType } from "@/utils/source-detection";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
 import type { NewSource } from "@/database/schema/sources";
+import { logger } from "@/utils/logger";
 
 const { documents, sources } = schema;
 
@@ -106,7 +107,7 @@ sourcesRouter.post("/:documentId", async (c) => {
 
         return c.json(inserted, 201);
     } catch (error) {
-        console.error("Failed to add source:", error);
+        logger.error({ error, url, documentId }, "Failed to add source");
         return c.json({ error: "Failed to process source" }, 500);
     }
 });

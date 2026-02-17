@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import { logger } from '@/utils/logger';
 
 declare module 'hono' {
     interface ContextVariableMap {
@@ -49,7 +50,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
 
         await next();
     } catch (error) {
-        console.error('Token verification failed:', error);
+        logger.error({ error }, 'Token verification failed');
         
         return c.json({ 
             error: 'Unauthorized',

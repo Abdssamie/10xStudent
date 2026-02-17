@@ -4,6 +4,7 @@ import { buildR2Key } from "@/services/r2-storage";
 import { authMiddleware } from "@/middleware/auth";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, R2_BUCKET_NAME } from "@/services/r2-client";
+import { logger } from "@/utils/logger";
 
 import { createDocumentSchema } from "@shared/src/document";
 
@@ -129,7 +130,7 @@ documentsRouter.delete("/:id", async (c) => {
     );
   } catch (error) {
     // Log error but continue with DB deletion
-    console.error("Failed to delete from R2:", error);
+    logger.error({ error, documentId, typstKey: document.typstKey }, "Failed to delete from R2");
   }
 
   // Delete from database

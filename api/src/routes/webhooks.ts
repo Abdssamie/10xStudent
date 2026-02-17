@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { Webhook } from "svix";
 import { db, schema, eq } from "@/database";
+import { logger } from "@/utils/logger";
 
 const { users } = schema;
 
@@ -22,7 +23,7 @@ webhooksRouter.post("/clerk", async (c) => {
   // Verify webhook signature using CLERK_WEBHOOK_SIGNING_SECRET
   const webhookSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
   if (!webhookSecret) {
-    console.error("CLERK_WEBHOOK_SIGNING_SECRET not configured");
+    logger.error("CLERK_WEBHOOK_SIGNING_SECRET not configured");
     return c.json({ error: "Webhook secret not configured" }, 500);
   }
 
@@ -36,7 +37,7 @@ webhooksRouter.post("/clerk", async (c) => {
       "svix-signature": svixSignature,
     }) as any;
   } catch (err) {
-    console.error("Webhook verification failed:", err);
+    logger.error({ error: err }, "Webhook verification failed");
     return c.json({ error: "Invalid webhook signature" }, 401);
   }
 
@@ -59,7 +60,7 @@ webhooksRouter.post("/clerk", async (c) => {
         })
         .onConflictDoNothing(); // On user.updated, keep existing data
     } catch (err) {
-      console.error("Failed to sync user:", err);
+      logger.error({ error: err, userId, eventType: event.type }, "Failed to sync user");
       // Return 500 to trigger Svix retry
       return c.json({ error: "Failed to sync user" }, 500);
     }
@@ -74,7 +75,7 @@ webhooksRouter.post("/clerk", async (c) => {
     try {
       await db.delete(users).where(eq(users.id, userId));
     } catch (err) {
-      console.error("Failed to delete user:", err);
+      logger.error({ error: err, userId }, "Failed to delete user");
       return c.json({ error: "Failed to delete user" }, 500);
     }
 

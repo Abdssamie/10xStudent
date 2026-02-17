@@ -12,6 +12,8 @@ import { createServicesMiddleware } from './middleware/services';
 import { createServiceContainer } from './services/container';
 import { constructApiRoute } from './utils/router';
 import { db } from './database';
+import { redis, closeRedis } from './lib/redis';
+import { createDefaultRateLimiter } from './middleware/rate-limit';
 
 const app = new Hono();
 
@@ -30,8 +32,9 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date() }));
 app.route(constructApiRoute('/webhooks'), webhooksRouter);
 webhooksRouter.use("/*", createServicesMiddleware(services));
 
-// Protected Routes (with auth, services, and Sentry context)
+// Protected Routes (with auth, rate limiting, services, and Sentry context)
 appRouter.use("/*", authMiddleware);
+appRouter.use("/*", createDefaultRateLimiter(redis));
 appRouter.use("/*", createServicesMiddleware(services));
 appRouter.use("/*", sentryContext);
 
@@ -40,6 +43,19 @@ app.route('/', appRouter);
 
 // Error handling middleware (must be last)
 app.onError(errorHandler);
+
+// Graceful shutdown handler
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, closing connections...');
+    await closeRedis();
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    console.log('SIGINT received, closing connections...');
+    await closeRedis();
+    process.exit(0);
+});
 
 export default {
     port: 3001,

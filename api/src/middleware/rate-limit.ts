@@ -1,34 +1,14 @@
 /**
- * Rate limiting middleware
- * Protects API endpoints from abuse using sliding window algorithm
+ * Rate limiting middleware using Redis with sliding window algorithm
+ * Protects API endpoints from abuse with per-user rate limiting
  */
 
 import { createMiddleware } from "hono/factory";
-import { TooManyRequestsError } from "@/errors";
-import { logger } from "@/utils/logger";
-import { env } from "@/config/env";
-
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
-
-interface RateLimitStore {
-  [key: string]: RateLimitEntry;
-}
-
-// In-memory store for rate limiting
-const store: RateLimitStore = {};
-
-// Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  Object.keys(store).forEach((key) => {
-    if (store[key]?.resetAt && store[key].resetAt < now) {
-      delete store[key];
-    }
-  });
-}, 5 * 60 * 1000);
+import type { Context } from "hono";
+import type Redis from "ioredis";
+import { TooManyRequestsError } from "../errors/index.js";
+import { logger } from "../utils/logger.js";
+import { env } from "../config/env.js";
 
 /**
  * Rate limiter options
@@ -36,106 +16,153 @@ setInterval(() => {
 export interface RateLimitOptions {
   windowMs: number;
   maxRequests: number;
-  keyGenerator?: (c: any) => string;
-  skipSuccessfulRequests?: boolean;
+  keyPrefix?: string;
+  skipUnauthenticated?: boolean;
 }
 
 /**
- * Create a rate limiter middleware with custom options
+ * Create a rate limiter middleware with Redis-backed sliding window algorithm
+ * 
+ * Algorithm:
+ * - Uses Redis sorted sets to track request timestamps
+ * - Each request adds a timestamp to the sorted set
+ * - Old timestamps outside the window are removed
+ * - Count of timestamps in window determines if limit is exceeded
+ * - Fails open if Redis is unavailable (logs error but allows request)
  */
-export function createRateLimiter(options: RateLimitOptions) {
+export function createRateLimitMiddleware(
+  redis: Redis,
+  options: RateLimitOptions
+) {
   const {
     windowMs,
     maxRequests,
-    keyGenerator = (c) => c.get("auth")?.userId || c.req.header("x-forwarded-for") || "anonymous",
-    skipSuccessfulRequests = false,
+    keyPrefix = "ratelimit",
+    skipUnauthenticated = true,
   } = options;
 
-  return createMiddleware(async (c, next) => {
-    const key = keyGenerator(c);
-    const now = Date.now();
-    const entry = store[key];
+  return createMiddleware(async (c: Context, next) => {
+    // Get user ID from auth context
+    const userId = c.get("auth")?.userId;
 
-    // Initialize or reset window
-    if (!entry || now > entry.resetAt) {
-      store[key] = {
-        count: 1,
-        resetAt: now + windowMs,
-      };
-
-      // Set rate limit headers
-      c.header("X-RateLimit-Limit", maxRequests.toString());
-      c.header("X-RateLimit-Remaining", (maxRequests - 1).toString());
-      c.header("X-RateLimit-Reset", new Date(store[key].resetAt).toISOString());
-
+    // Skip rate limiting for unauthenticated requests if configured
+    if (skipUnauthenticated && !userId) {
       await next();
       return;
     }
 
-    // Check if limit exceeded
-    if (entry.count >= maxRequests) {
-      const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-      
-      logger.warn(
+    // Generate rate limit key
+    const key = `${keyPrefix}:${userId || "anonymous"}`;
+    const now = Date.now();
+    const windowStart = now - windowMs;
+
+    try {
+      // Use Redis pipeline for atomic operations
+      const pipeline = redis.pipeline();
+
+      // Remove old entries outside the window
+      pipeline.zremrangebyscore(key, 0, windowStart);
+
+      // Count current requests in window
+      pipeline.zcard(key);
+
+      // Add current request timestamp
+      pipeline.zadd(key, now, `${now}-${Math.random()}`);
+
+      // Set expiry on the key (cleanup)
+      pipeline.expire(key, Math.ceil(windowMs / 1000) + 1);
+
+      // Execute pipeline
+      const results = await pipeline.exec();
+
+      if (!results) {
+        throw new Error("Redis pipeline returned null");
+      }
+
+      // Get count before adding current request (index 1 in results)
+      const countResult = results[1];
+      if (!countResult || countResult[0]) {
+        throw new Error("Failed to get request count from Redis");
+      }
+
+      const currentCount = countResult[1] as number;
+      const remaining = Math.max(0, maxRequests - currentCount - 1);
+      const resetAt = now + windowMs;
+
+      // Set rate limit headers
+      c.header("X-RateLimit-Limit", maxRequests.toString());
+      c.header("X-RateLimit-Remaining", remaining.toString());
+      c.header("X-RateLimit-Reset", new Date(resetAt).toISOString());
+
+      // Check if limit exceeded
+      if (currentCount >= maxRequests) {
+        const retryAfter = Math.ceil(windowMs / 1000);
+
+        logger.warn(
+          {
+            userId,
+            path: c.req.path,
+            method: c.req.method,
+            count: currentCount,
+            limit: maxRequests,
+            windowMs,
+          },
+          "Rate limit exceeded"
+        );
+
+        c.header("Retry-After", retryAfter.toString());
+
+        throw new TooManyRequestsError(
+          "Rate limit exceeded. Please try again later.",
+          { retryAfter, limit: maxRequests, windowMs }
+        );
+      }
+
+      await next();
+    } catch (err) {
+      // If it's our TooManyRequestsError, re-throw it
+      if (err instanceof TooManyRequestsError) {
+        throw err;
+      }
+
+      // Fail open: if Redis is unavailable, log error but allow request
+      logger.error(
         {
-          key,
-          userId: c.get("auth")?.userId,
+          err,
+          userId,
           path: c.req.path,
           method: c.req.method,
-          count: entry.count,
-          limit: maxRequests,
         },
-        "Rate limit exceeded"
+        "Rate limiting failed - allowing request (fail open)"
       );
 
-      c.header("X-RateLimit-Limit", maxRequests.toString());
-      c.header("X-RateLimit-Remaining", "0");
-      c.header("X-RateLimit-Reset", new Date(entry.resetAt).toISOString());
-      c.header("Retry-After", retryAfter.toString());
-
-      throw new TooManyRequestsError(
-        "Rate limit exceeded. Please try again later.",
-        { retryAfter, limit: maxRequests, window: windowMs }
-      );
+      await next();
     }
-
-    // Increment counter
-    entry.count++;
-
-    // Set rate limit headers
-    c.header("X-RateLimit-Limit", maxRequests.toString());
-    c.header("X-RateLimit-Remaining", (maxRequests - entry.count).toString());
-    c.header("X-RateLimit-Reset", new Date(entry.resetAt).toISOString());
-
-    await next();
   });
 }
 
 /**
  * Default rate limiter for authenticated routes
- * 100 requests per minute per user
+ * Uses environment configuration
  */
-export const rateLimitMiddleware = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 100,
-});
+export function createDefaultRateLimiter(redis: Redis) {
+  return createRateLimitMiddleware(redis, {
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    maxRequests: env.RATE_LIMIT_MAX_REQUESTS,
+    keyPrefix: "ratelimit:api",
+    skipUnauthenticated: true,
+  });
+}
 
 /**
  * Strict rate limiter for AI-heavy endpoints
- * 10 requests per minute per user
+ * Uses environment configuration for AI limits
  */
-export const strictRateLimitMiddleware = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10,
-});
-
-/**
- * Rate limiter for webhook endpoints (by IP)
- * 50 requests per minute per IP
- */
-export const webhookRateLimitMiddleware = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 50,
-  keyGenerator: (c) => c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown",
-});
-
+export function createStrictRateLimiter(redis: Redis) {
+  return createRateLimitMiddleware(redis, {
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    maxRequests: env.RATE_LIMIT_AI_MAX_REQUESTS,
+    keyPrefix: "ratelimit:ai",
+    skipUnauthenticated: true,
+  });
+}

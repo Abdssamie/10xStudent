@@ -47,6 +47,26 @@ const envSchema = z.object({
     .optional()
     .transform((val) => (val ? parseFloat(val) : undefined))
     .pipe(z.number().min(0).max(1).optional()),
+
+  // Redis
+  REDIS_URL: z.string().url(),
+
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z
+    .string()
+    .default("60000")
+    .transform(Number)
+    .pipe(z.number().int().positive()),
+  RATE_LIMIT_MAX_REQUESTS: z
+    .string()
+    .default("100")
+    .transform(Number)
+    .pipe(z.number().int().positive()),
+  RATE_LIMIT_AI_MAX_REQUESTS: z
+    .string()
+    .default("10")
+    .transform(Number)
+    .pipe(z.number().int().positive()),
 });
 
 // Validate environment variables at startup

@@ -1,20 +1,21 @@
 import { Hono } from "hono";
 import { db, schema, eq, and } from "@/database";
-import { buildR2Key } from "@/services/r2-storage";
 import { authMiddleware } from "@/middleware/auth";
-import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client, R2_BUCKET_NAME } from "@/services/r2-client";
 import { logger } from "@/utils/logger";
 import { NotFoundError, ValidationError } from "@/errors";
 import { Sentry } from "@/lib/sentry";
 import { addOperationBreadcrumb, setOperationTags } from "@/middleware/sentry-context";
 import { requireDocumentOwnership } from "@/utils/ownership";
+import { createStorageService } from "@/services/storage";
 
 import { createDocumentSchema } from "@shared/src/document";
 
 const { documents } = schema;
 
 export const documentsRouter = new Hono();
+
+// Initialize storage service
+const storageService = createStorageService();
 
 // POST /documents - Create a new document
 documentsRouter.post("/", async (c) => {
@@ -33,9 +34,8 @@ documentsRouter.post("/", async (c) => {
 
       const { title, template, citationFormat } = parsed.data;
 
-      // Generate document ID and R2 key
+      // Generate document ID
       const documentId = crypto.randomUUID();
-      const typstKey = buildR2Key(userId, documentId);
 
       setOperationTags(c, { operation: "create_document", documentId });
       addOperationBreadcrumb(c, "Creating new document", { documentId, title });
@@ -43,16 +43,12 @@ documentsRouter.post("/", async (c) => {
       // Create minimal Typst stub content
       const stubContent = `= ${title}\n\n`;
 
-      // Upload stub file to R2
-      addOperationBreadcrumb(c, "Uploading stub to R2", { typstKey });
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: R2_BUCKET_NAME,
-          Key: typstKey,
-          Body: stubContent,
-          ContentType: "text/plain",
-        }),
-      );
+      // Upload stub file to R2 using storage service
+      addOperationBreadcrumb(c, "Uploading stub to R2");
+      await storageService.uploadDocument(userId, documentId, stubContent);
+
+      // Build R2 key for database storage
+      const typstKey = `documents/${userId}/${documentId}/main.typ`;
 
       // Create document in database
       addOperationBreadcrumb(c, "Saving document to database");
@@ -126,21 +122,16 @@ documentsRouter.delete("/:id", async (c) => {
       setOperationTags(c, { operation: "delete_document", documentId });
       addOperationBreadcrumb(c, "Deleting document", { documentId });
 
-      // Verify ownership and get document to retrieve R2 key
+      // Verify ownership and get document
       const document = await requireDocumentOwnership(documentId, userId);
 
-      // Delete from R2
+      // Delete from R2 using storage service
       try {
-        addOperationBreadcrumb(c, "Deleting from R2", { typstKey: document.typstKey });
-        await s3Client.send(
-          new DeleteObjectCommand({
-            Bucket: R2_BUCKET_NAME,
-            Key: document.typstKey,
-          }),
-        );
+        addOperationBreadcrumb(c, "Deleting from R2");
+        await storageService.deleteDocument(userId, documentId);
       } catch (error) {
         // Log error but continue with DB deletion
-        logger.error({ error, documentId, typstKey: document.typstKey }, "Failed to delete from R2");
+        logger.error({ error, documentId }, "Failed to delete from R2");
         Sentry.captureException(error, {
           tags: { operation: "r2_delete", documentId },
         });

@@ -25,7 +25,7 @@ cd api && bun install && bun run dev
 bun run build                    # Production build
 bun run typecheck                # TypeScript type checking
 bun run test -- --run            # All tests (non-interactive, starts TestContainers)
-bun run test -- --run bibtex     # Single test by pattern match
+bun run test -- --run bibtex     # Single test by pattern match (e.g., "bibtex", "credit-manager")
 bun run test:integration         # Integration tests only
 
 # Database (from api/)
@@ -82,6 +82,26 @@ function getUser(id: string) {
 }
 ```
 
+### Logging (Structured with Pino)
+**CRITICAL:** Never use `console.log/error/warn`. Always import structured logger from `@/utils/logger`.
+
+```typescript
+import { logger } from "@/utils/logger";
+
+// ✅ Good - Structured logging with context
+logger.info({ userId, documentId }, "Document created successfully");
+logger.error({ error, url, statusCode }, "External API failed");
+logger.warn({ credits: user.credits }, "Low credit balance");
+
+// ❌ Bad - Don't use console
+console.log("Document created"); // Wrong!
+console.error("API failed:", error); // Wrong!
+```
+
+**Log Levels:** `debug`, `info`, `warn`, `error`, `fatal`
+**Context:** Always include relevant IDs, operation names, and error details
+**Production:** Logs are JSON format, development uses pretty-printed output
+
 ### Environment Variables (API Only)
 **CRITICAL:** Never use `process.env` directly. Always import from `@/config/env`:
 
@@ -94,6 +114,8 @@ const key = env.GOOGLE_API_KEY;
 const key = process.env.GOOGLE_API_KEY;
 ```
 
+**Reason:** `@/config/env` validates all environment variables at startup using Zod schemas.
+
 ### Naming Conventions
 - Files: `kebab-case.ts`
 - Components: `PascalCase.tsx`
@@ -102,24 +124,45 @@ const key = process.env.GOOGLE_API_KEY;
 - Types/Interfaces: `PascalCase`
 - Private functions: `_camelCase()` (prefix with underscore)
 
-### Error Handling
+### Error Handling (Unified System)
+**CRITICAL:** Always use custom error classes from `@/errors`, never throw generic `Error` or return JSON directly.
+
 ```typescript
-// API routes - return JSON with error field
-return c.json({ 
-  error: 'Validation failed', 
-  message: error.message,
-  details: error.flatten() 
-}, 400);
+import { NotFoundError, ValidationError, UnauthorizedError, InsufficientCreditsError } from "@/errors";
 
-// Services - throw typed errors
-throw new Error('Invalid input');
+// ✅ Good - Throw custom errors (middleware catches them)
+if (!user) {
+  throw new NotFoundError("User not found");
+}
 
-// Always handle async errors
-try {
-  await riskyOperation();
-} catch (error) {
-  console.error('Operation failed:', error);
-  throw error;
+if (user.credits < cost) {
+  throw new InsufficientCreditsError(
+    "Insufficient credits",
+    { available: user.credits, required: cost }
+  );
+}
+
+// ❌ Bad - Don't return JSON directly or throw generic Error
+return c.json({ error: "Not found" }, 404); // Wrong!
+throw new Error("User not found"); // Wrong!
+```
+
+**Available Error Classes:**
+- `NotFoundError(message, details?)` - 404
+- `ValidationError(message, details?)` - 400
+- `UnauthorizedError(message, details?)` - 401
+- `ForbiddenError(message, details?)` - 403
+- `InsufficientCreditsError(message, details?)` - 402
+- `ConflictError(message, details?)` - 409
+- `TooManyRequestsError(message, details?)` - 429
+- `AppError(message, statusCode, code, details?)` - Custom status
+
+**Error Middleware:** Automatically logs errors with structured context and returns consistent JSON:
+```json
+{
+  "error": "NOT_FOUND",
+  "message": "User not found",
+  "details": { "userId": "123" }
 }
 ```
 
@@ -205,16 +248,18 @@ router.post("/", authMiddleware, async (c) => {
 
 1. **Package Manager:** Always `bun`, never npm/yarn/pnpm
 2. **Environment:** Import from `@/config/env`, never `process.env` directly (API only)
-3. **Types:** Strict mode, no `any`, explicit return types
-4. **Imports:** Follow order (external → shared → internal → relative)
-5. **Naming:** kebab-case files, PascalCase components/types, camelCase functions
-6. **Auth:** Use `c.get('auth')` in protected routes
-7. **Database:** Drizzle ORM only, never raw SQL without parameterization
-8. **Validation:** Zod schemas for all input validation
-9. **Testing:** Vitest with `describe`/`it`/`expect`, use `--run` flag
-10. **Documentation:** NEVER create .md files unless explicitly requested
-11. **Styling:** NEVER hardcode `globals.css` - use `shadcn` CLI tools
-12. **Array Access:** Always check for undefined when accessing array elements
+3. **Logging:** Import from `@/utils/logger`, never `console.log/error/warn` (API only)
+4. **Error Handling:** Throw custom errors from `@/errors`, never generic `Error` or direct JSON responses (API only)
+5. **Types:** Strict mode, no `any`, explicit return types
+6. **Imports:** Follow order (external → shared → internal → relative)
+7. **Naming:** kebab-case files, PascalCase components/types, camelCase functions
+8. **Auth:** Use `c.get('auth')` in protected routes
+9. **Database:** Drizzle ORM only, never raw SQL without parameterization
+10. **Validation:** Zod schemas for all input validation
+11. **Testing:** Vitest with `describe`/`it`/`expect`, use `--run` flag
+12. **Documentation:** NEVER create .md files unless explicitly requested
+13. **Styling:** NEVER hardcode `globals.css` - use `shadcn` CLI tools
+14. **Array Access:** Always check for undefined when accessing array elements
 
 ---
 
@@ -228,6 +273,8 @@ import { z } from "zod";
 
 import { db, schema } from "@/database";
 import { authMiddleware } from "@/middleware/auth";
+import { NotFoundError, ValidationError } from "@/errors";
+import { logger } from "@/utils/logger";
 
 export const router = new Hono();
 
@@ -244,13 +291,19 @@ router.post("/", authMiddleware, zValidator("json", inputSchema), async (c) => {
     .values({ ...data, userId })
     .returning();
   
-  return c.json({ success: true, data: result });
+  if (!result) {
+    throw new NotFoundError("Failed to create document");
+  }
+  
+  logger.info({ userId, documentId: result.id }, "Document created");
+  return c.json(result, 201);
 });
 ```
 
 ### Database Query
 ```typescript
 import { db, schema, eq, and } from "@/database";
+import { NotFoundError } from "@/errors";
 
 // Select with conditions
 const documents = await db
@@ -264,7 +317,7 @@ const documents = await db
 // Handle undefined array access
 const document = documents[0]; // Type: Document | undefined
 if (!document) {
-  return c.json({ error: "Not found" }, 404);
+  throw new NotFoundError("Document not found");
 }
 ```
 
@@ -303,7 +356,7 @@ bun run test
 ### Writing Integration Tests
 ```typescript
 import { describe, it, expect, beforeEach } from "vitest";
-import { cleanDatabase, seedTestUser, getUserCredits } from "../helpers/db-helpers";
+import { cleanDatabase, seedTestUser, getUserCredits } from "../helpers/test-database-service";
 
 describe("MyService Integration Tests", () => {
   beforeEach(async () => {
@@ -347,12 +400,11 @@ describe("My Feature E2E Tests (Real API)", () => {
 });
 ```
 
-### Test Helpers (api/tests/helpers/db-helpers.ts)
+### Test Helpers (api/tests/helpers/)
+- `test-database-service.ts` - TestContainers setup and database helpers
 - `cleanDatabase()` - Truncate all tables between tests
 - `seedTestUser(id, credits)` - Create test user with credits
-- `seedTestDocument(userId, title)` - Create test document
 - `getUserCredits(userId)` - Get current credit balance
-- `getUserCreditLogs(userId)` - Get all credit logs
 - `getTestDb()` - Get database connection for tests
 
 ### Mock Strategy

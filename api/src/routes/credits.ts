@@ -7,6 +7,8 @@ import { Hono } from "hono";
 import { db, schema, eq } from "@/database";
 import { desc, sql } from "drizzle-orm";
 import { NotFoundError } from "@/errors";
+import { Sentry } from "@/lib/sentry";
+import { addOperationBreadcrumb, setOperationTags } from "@/middleware/sentry-context";
 
 const { users, creditLogs } = schema;
 
@@ -17,33 +19,41 @@ creditsRouter.get("/", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
 
-    const [user] = await db
-        .select({
-            balance: users.credits,
-            creditsResetAt: users.creditsResetAt,
-        })
-        .from(users)
-        .where(eq(users.id, userId));
+    return await Sentry.startSpan(
+        { name: "GET /credits", op: "http.server" },
+        async () => {
+            addOperationBreadcrumb(c, "Fetching user credit balance");
+            setOperationTags(c, { operation: "get_credits" });
 
-    if (!user) {
-        throw new NotFoundError("User not found");
-    }
+            const [user] = await db
+                .select({
+                    balance: users.credits,
+                    creditsResetAt: users.creditsResetAt,
+                })
+                .from(users)
+                .where(eq(users.id, userId));
 
-    // Calculate usage this month (since last reset)
-    const [usage] = await db
-        .select({
-            total: sql<number>`COALESCE(SUM(${creditLogs.cost}), 0)`,
-        })
-        .from(creditLogs)
-        .where(
-            sql`${creditLogs.userId} = ${userId} AND ${creditLogs.timestamp} >= ${user.creditsResetAt}`
-        );
+            if (!user) {
+                throw new NotFoundError("User not found");
+            }
 
-    return c.json({
-        balance: user.balance,
-        creditsResetAt: user.creditsResetAt,
-        usedThisMonth: usage?.total ?? 0,
-    });
+            // Calculate usage this month (since last reset)
+            const [usage] = await db
+                .select({
+                    total: sql<number>`COALESCE(SUM(${creditLogs.cost}), 0)`,
+                })
+                .from(creditLogs)
+                .where(
+                    sql`${creditLogs.userId} = ${userId} AND ${creditLogs.timestamp} >= ${user.creditsResetAt}`
+                );
+
+            return c.json({
+                balance: user.balance,
+                creditsResetAt: user.creditsResetAt,
+                usedThisMonth: usage?.total ?? 0,
+            });
+        }
+    );
 });
 
 // GET /credits/history - Get paginated transaction log

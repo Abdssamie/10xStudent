@@ -13,6 +13,8 @@ import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
 import type { NewSource } from "@/database/schema/sources";
 import { logger } from "@/utils/logger";
 import { NotFoundError, ValidationError } from "@/errors";
+import { Sentry } from "@/lib/sentry";
+import { addOperationBreadcrumb, setOperationTags } from "@/middleware/sentry-context";
 
 const { documents, sources } = schema;
 
@@ -52,62 +54,76 @@ sourcesRouter.post("/:documentId", async (c) => {
     const userId = auth.userId;
     const documentId = c.req.param("documentId");
 
-    // Verify document ownership
-    const document = await verifyDocumentOwnership(documentId, userId);
-    if (!document) {
-        throw new NotFoundError("Document not found");
-    }
+    return await Sentry.startSpan(
+        { name: "POST /sources/:documentId", op: "http.server" },
+        async () => {
+            setOperationTags(c, { operation: "add_source", documentId });
+            addOperationBreadcrumb(c, "Adding source to document", { documentId });
 
-    // Parse and validate request body
-    const body = await c.req.json();
-    const parsed = createSourceSchema.safeParse({ ...body, documentId });
+            // Verify document ownership
+            const document = await verifyDocumentOwnership(documentId, userId);
+            if (!document) {
+                throw new NotFoundError("Document not found");
+            }
 
-    if (!parsed.success) {
-        throw new ValidationError("Invalid request", parsed.error.flatten());
-    }
+            // Parse and validate request body
+            const body = await c.req.json();
+            const parsed = createSourceSchema.safeParse({ ...body, documentId });
 
-    const { url, citationKey } = parsed.data;
+            if (!parsed.success) {
+                throw new ValidationError("Invalid request", parsed.error.flatten());
+            }
 
-    try {
-        // Step 1: Scrape URL for metadata
-        const scraped = await scrapeUrl(url);
+            const { url, citationKey } = parsed.data;
 
-        // Step 2: Generate embedding from content
-        let embedding: number[] | undefined;
-        if (scraped.content && scraped.content.length > 0) {
-            embedding = await generateEmbedding(scraped.content);
-        }
+            try {
+                // Step 1: Scrape URL for metadata
+                addOperationBreadcrumb(c, "Scraping URL", { url });
+                const scraped = await scrapeUrl(url);
 
-        // Step 3: Parse publication date if available
-        let publicationDate: Date | undefined;
-        if (scraped.publishedDate) {
-            const parsed = new Date(scraped.publishedDate);
-            if (!isNaN(parsed.getTime())) {
-                publicationDate = parsed;
+                // Step 2: Generate embedding from content
+                let embedding: number[] | undefined;
+                if (scraped.content && scraped.content.length > 0) {
+                    addOperationBreadcrumb(c, "Generating embedding", { contentLength: scraped.content.length });
+                    embedding = await Sentry.startSpan(
+                        { name: "generateEmbedding", op: "ai.embedding" },
+                        () => generateEmbedding(scraped.content!)
+                    );
+                }
+
+                // Step 3: Parse publication date if available
+                let publicationDate: Date | undefined;
+                if (scraped.publishedDate) {
+                    const parsed = new Date(scraped.publishedDate);
+                    if (!isNaN(parsed.getTime())) {
+                        publicationDate = parsed;
+                    }
+                }
+
+                // Step 4: Build source insert with auto-detected type
+                const sourceInsert: NewSource = {
+                    documentId,
+                    url,
+                    citationKey,
+                    title: scraped.title,
+                    content: scraped.content,
+                    embedding,
+                    author: scraped.author,
+                    publicationDate,
+                    sourceType: detectSourceType(url),
+                };
+
+                // Step 5: Insert into database
+                addOperationBreadcrumb(c, "Saving source to database");
+                const [inserted] = await db.insert(sources).values(sourceInsert).returning();
+
+                return c.json(inserted, 201);
+            } catch (error) {
+                logger.error({ error, url, documentId }, "Failed to add source");
+                throw error;
             }
         }
-
-        // Step 4: Build source insert with auto-detected type
-        const sourceInsert: NewSource = {
-            documentId,
-            url,
-            citationKey,
-            title: scraped.title,
-            content: scraped.content,
-            embedding,
-            author: scraped.author,
-            publicationDate,
-            sourceType: detectSourceType(url),
-        };
-
-        // Step 5: Insert into database
-        const [inserted] = await db.insert(sources).values(sourceInsert).returning();
-
-        return c.json(inserted, 201);
-    } catch (error) {
-        logger.error({ error, url, documentId }, "Failed to add source");
-        throw error;
-    }
+    );
 });
 
 // GET /sources/:documentId - List all sources for a document

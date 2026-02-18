@@ -133,7 +133,7 @@ describe("Rate Limiting Middleware", () => {
   });
 
   it("should include correct rate limit headers", async () => {
-    const rateLimiter = createRateLimitMiddleware(mockRedis, {
+    const rateLimiter = createRateLimitMiddleware(redis, {
       windowMs: 60000,
       maxRequests: 10,
       keyPrefix: "test",
@@ -160,7 +160,7 @@ describe("Rate Limiting Middleware", () => {
   });
 
   it("should use different keys for different users", async () => {
-    const rateLimiter = createRateLimitMiddleware(mockRedis, {
+    const rateLimiter = createRateLimitMiddleware(redis, {
       windowMs: 60000,
       maxRequests: 1,
       keyPrefix: "test",

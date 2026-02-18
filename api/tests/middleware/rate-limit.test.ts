@@ -83,7 +83,7 @@ describe("Rate Limiting Middleware", () => {
   });
 
   it("should block requests exceeding rate limit", async () => {
-    const rateLimiter = createRateLimitMiddleware(mockRedis, {
+    const rateLimiter = createRateLimitMiddleware(redis, {
       windowMs: 60000,
       maxRequests: 2,
       keyPrefix: "test",

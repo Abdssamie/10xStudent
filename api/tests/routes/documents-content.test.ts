@@ -95,7 +95,7 @@ describe("GET /api/v1/documents/:id/content", () => {
     expect(response.status).toBe(404);
   });
 
-  it("should return 403 if user does not own document", async () => {
+  it("should return 404 if user does not own document", async () => {
     const documentId = crypto.randomUUID();
     const otherUserId = "660e8400-e29b-41d4-a716-446655440002";
     const db = testDb.getDb();
@@ -115,6 +115,6 @@ describe("GET /api/v1/documents/:id/content", () => {
       method: "GET",
     });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(404);
   });
 });

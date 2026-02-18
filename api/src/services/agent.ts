@@ -56,8 +56,6 @@ export class AgentService {
     // Reserve estimated credits (1 credit upfront, will be adjusted after completion)
     const reservation = await this.creditManager.reserveCredits(userId, 1);
 
-    let totalTokens = 0;
-
     const stream = chat({
       adapter: this.adapter,
       messages: messages,
@@ -65,8 +63,8 @@ export class AgentService {
     });
 
     // Wrap stream to capture token usage
-    const self = this;
-    async function* createTrackedStream() {
+    const createTrackedStream = (async function* (this: AgentService) {
+      let totalTokens = 0;
       try {
         for await (const chunk of stream) {
           if (chunk.type === "RUN_FINISHED" && chunk.usage) {
@@ -78,7 +76,7 @@ export class AgentService {
         // Once the loop is done, we have the totalTokens!
         if (totalTokens > 0) {
           const actualCost = CREDIT_COSTS.CHAT_COMPLETION(totalTokens);
-          await self.creditManager.finalizeCredits(
+          await this.creditManager.finalizeCredits(
             userId,
             "chat_completion",
             reservation.reservedAmount,
@@ -87,19 +85,19 @@ export class AgentService {
           );
         } else {
           // No tokens used, rollback the reserved credit
-          await self.creditManager.rollbackCredits(
+          await this.creditManager.rollbackCredits(
             userId,
             reservation.reservedAmount,
           );
         }
       } catch (err) {
-        await self.creditManager.rollbackCredits(
+        await this.creditManager.rollbackCredits(
           userId,
           reservation.reservedAmount,
         );
         throw err;
       }
-    }
+    }).bind(this);
 
     return toServerSentEventsResponse(createTrackedStream());
   }

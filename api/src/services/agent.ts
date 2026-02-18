@@ -178,7 +178,7 @@ export class AgentService {
 
         // Once the loop is done, persist the assistant's response
         if (assistantContent || toolCalls.length > 0) {
-          await self.persistMessage(
+          await this.persistMessage(
             documentId,
             "assistant",
             assistantContent,

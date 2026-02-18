@@ -14,6 +14,9 @@ export const documentsRouter = new Hono();
 // POST /documents - Create a new document
 documentsRouter.post("/", async (c) => {
   const auth = c.get("auth");
+  if (!auth) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
   const userId = auth.userId;
 
   const body = await c.req.json();
@@ -64,6 +67,9 @@ documentsRouter.post("/", async (c) => {
 // GET /documents - List user's documents
 documentsRouter.get("/", async (c) => {
   const auth = c.get("auth");
+  if (!auth) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
   const userId = auth.userId;
 
   const userDocuments = await db
@@ -77,6 +83,9 @@ documentsRouter.get("/", async (c) => {
 // PATCH /documents/:id - Update document metadata
 documentsRouter.patch("/:id", async (c) => {
   const auth = c.get("auth");
+  if (!auth) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
   const userId = auth.userId;
   const documentId = c.req.param("id");
 
@@ -106,6 +115,9 @@ documentsRouter.patch("/:id", async (c) => {
 // DELETE /documents/:id - Delete document
 documentsRouter.delete("/:id", async (c) => {
   const auth = c.get("auth");
+  if (!auth) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
   const userId = auth.userId;
   const documentId = c.req.param("id");
 

@@ -47,6 +47,9 @@ async function verifySourceOwnership(sourceId: string, userId: string) {
 // POST /sources/:documentId - Add a source by URL
 sourcesRouter.post("/:documentId", async (c) => {
     const auth = c.get("auth");
+    if (!auth) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
     const userId = auth.userId;
     const documentId = c.req.param("documentId");
 
@@ -114,6 +117,9 @@ sourcesRouter.post("/:documentId", async (c) => {
 // GET /sources/:documentId - List all sources for a document
 sourcesRouter.get("/:documentId", async (c) => {
     const auth = c.get("auth");
+    if (!auth) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
     const userId = auth.userId;
     const documentId = c.req.param("documentId");
 
@@ -142,6 +148,9 @@ sourcesRouter.get("/:documentId", async (c) => {
 // PATCH /sources/:sourceId - Update source metadata
 sourcesRouter.patch("/:sourceId", async (c) => {
     const auth = c.get("auth");
+    if (!auth) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
     const userId = auth.userId;
     const sourceId = c.req.param("sourceId");
 
@@ -182,6 +191,9 @@ sourcesRouter.patch("/:sourceId", async (c) => {
 // DELETE /sources/:sourceId - Delete a source
 sourcesRouter.delete("/:sourceId", async (c) => {
     const auth = c.get("auth");
+    if (!auth) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
     const userId = auth.userId;
     const sourceId = c.req.param("sourceId");
 

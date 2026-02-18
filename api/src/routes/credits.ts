@@ -14,6 +14,9 @@ export const creditsRouter = new Hono();
 // GET /credits - Get user credit balance
 creditsRouter.get("/", async (c) => {
     const auth = c.get("auth");
+    if (!auth) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
     const userId = auth.userId;
 
     const [user] = await db
@@ -48,6 +51,9 @@ creditsRouter.get("/", async (c) => {
 // GET /credits/history - Get paginated transaction log
 creditsRouter.get("/history", async (c) => {
     const auth = c.get("auth");
+    if (!auth) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
     const userId = auth.userId;
 
     // Pagination params

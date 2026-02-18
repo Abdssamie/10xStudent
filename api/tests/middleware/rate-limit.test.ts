@@ -15,7 +15,34 @@ describe("Rate Limiting Middleware", () => {
   let redisContainer: StartedRedisContainer;
   let redis: Redis;
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    // Start Redis container
+    redisContainer = await new RedisContainer("redis:7-alpine").start();
+    
+    // Create Redis client
+    redis = new Redis({
+      host: redisContainer.getHost(),
+      port: redisContainer.getPort(),
+    });
+  }, 60000); // 60 second timeout for container startup
+
+  afterAll(async () => {
+    // Disconnect Redis client
+    if (redis) {
+      await redis.quit();
+    }
+    
+    // Stop container
+    if (redisContainer) {
+      await redisContainer.stop();
+    }
+  });
+
+  beforeEach(async () => {
+    // Clean all Redis data between tests
+    await redis.flushall();
+    
+    // Create fresh Hono app for each test
     app = new Hono();
     
     // Add error handler to convert errors to HTTP responses

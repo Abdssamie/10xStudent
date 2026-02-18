@@ -19,4 +19,16 @@ export const updateDocumentBodySchema = z.object({
   citationFormat: z.enum(["APA", "MLA", "Chicago"]).optional(),
 });
 
+export const documentContentResponseSchema = z.object({
+  content: z.string(),
+});
+
+export const updateDocumentContentBodySchema = z.object({
+  content: z.string().min(1, "Content cannot be empty"),
+});
+
+export const bibliographyResponseSchema = z.object({
+  bibliography: z.string(),
+});
+
 export { createDocumentSchema };

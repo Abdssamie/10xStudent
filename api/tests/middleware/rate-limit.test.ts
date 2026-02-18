@@ -1,73 +1,22 @@
 /**
  * Rate limiting middleware tests
- * Tests Redis-backed sliding window rate limiting
+ * Tests Redis-backed sliding window rate limiting with real Redis instance
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Hono } from "hono";
-import type Redis from "ioredis";
+import Redis from "ioredis";
+import { RedisContainer, StartedRedisContainer } from "@testcontainers/redis";
 import { createRateLimitMiddleware } from "../../src/middleware/rate-limit";
-import { TooManyRequestsError } from "../../src/lib/errors";
-
-// Mock Redis client
-const createMockRedis = () => {
-  const store = new Map<string, Array<{ score: number; member: string }>>();
-
-  return {
-    pipeline: vi.fn(() => {
-      const commands: Array<() => Promise<any>> = [];
-
-      return {
-        zremrangebyscore: vi.fn((key: string, min: number, max: number) => {
-          commands.push(async () => {
-            const entries = store.get(key) || [];
-            const filtered = entries.filter((e) => e.score > max);
-            store.set(key, filtered);
-            return [null, filtered.length];
-          });
-          return this;
-        }),
-        zcard: vi.fn((key: string) => {
-          commands.push(async () => {
-            const entries = store.get(key) || [];
-            return [null, entries.length];
-          });
-          return this;
-        }),
-        zadd: vi.fn((key: string, score: number, member: string) => {
-          commands.push(async () => {
-            const entries = store.get(key) || [];
-            entries.push({ score, member });
-            store.set(key, entries);
-            return [null, 1];
-          });
-          return this;
-        }),
-        expire: vi.fn(() => {
-          commands.push(async () => [null, 1]);
-          return this;
-        }),
-        exec: vi.fn(async () => {
-          const results = [];
-          for (const cmd of commands) {
-            results.push(await cmd());
-          }
-          return results;
-        }),
-      };
-    }),
-    _store: store,
-    _reset: () => store.clear(),
-  } as unknown as Redis & { _store: Map<string, any>; _reset: () => void };
-};
+import { TooManyRequestsError } from "../../src/infrastructure/errors";
 
 describe("Rate Limiting Middleware", () => {
   let app: Hono;
-  let mockRedis: Redis & { _store: Map<string, any>; _reset: () => void };
+  let redisContainer: StartedRedisContainer;
+  let redis: Redis;
 
   beforeEach(() => {
     app = new Hono();
-    mockRedis = createMockRedis();
     
     // Add error handler to convert errors to HTTP responses
     app.onError((err, c) => {
@@ -81,9 +30,7 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  afterEach(() => {
-    mockRedis._reset();
-  });
+
 
   it("should allow requests within rate limit", async () => {
     // Mock auth context FIRST (middleware order matters!)
@@ -243,9 +190,9 @@ describe("Rate Limiting Middleware", () => {
   it("should fail open when Redis errors occur", async () => {
     // Create a Redis mock that throws errors
     const errorRedis = {
-      pipeline: vi.fn(() => {
+      pipeline: () => {
         throw new Error("Redis connection failed");
-      }),
+      },
     } as unknown as Redis;
 
     const rateLimiter = createRateLimitMiddleware(errorRedis, {

@@ -4,7 +4,7 @@
 // - Test bibliography generation with complex source hierarchies
 import { describe, it, expect } from "vitest";
 import { generateBibTex, mapSourceTypeToBibTex } from "./bibtex";
-import { type Source } from "@/database/schema/sources";
+import { type Source } from "@/infrastructure/db/schema/sources";
 
 function createMockSource(overrides: Partial<Source> = {}): Source {
   return {

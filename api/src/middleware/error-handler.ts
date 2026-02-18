@@ -6,7 +6,7 @@
 import { Context } from "hono";
 import { ZodError } from "zod";
 import { Sentry } from "@/lib/sentry";
-import { AppError } from "@/lib/errors";
+import { AppError } from "@/infrastructure/errors";
 import { logger } from "@/utils/logger";
 import { env } from "@/config/env";
 

@@ -1,6 +1,6 @@
 import { createMiddleware } from "hono/factory";
-import { db, schema, eq } from "@/database";
-import { UnauthorizedError, NotFoundError, InsufficientCreditsError } from "@/lib/errors";
+import { db, schema, eq } from "@/infrastructure/db";
+import { UnauthorizedError, NotFoundError, InsufficientCreditsError } from "@/infrastructure/errors";
 
 const { users } = schema;
 

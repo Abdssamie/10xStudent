@@ -3,8 +3,8 @@
  * Provides reusable functions to verify resource ownership and throw appropriate errors
  */
 
-import { schema, eq, and, type DB } from "@/database";
-import { NotFoundError } from "@/lib/errors";
+import { schema, eq, and, type DB } from "@/infrastructure/db";
+import { NotFoundError } from "@/infrastructure/errors";
 import { logger } from "@/utils/logger";
 
 const { documents, sources } = schema;

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { schema, eq, and } from "@/database";
+import { schema, eq, and } from "@/infrastructure/db";
 import { authMiddleware } from "@/middleware/auth";
 import { logger } from "@/utils/logger";
-import { NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/infrastructure/errors";
 import { requireDocumentOwnership } from "@/utils/ownership";
 
 import { createDocumentSchema } from "@shared/src/document";

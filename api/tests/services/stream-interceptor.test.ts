@@ -143,10 +143,8 @@ describe("Async Generator Stream Interceptor", () => {
 
       // Act & Assert
       const trackedStream = createTrackedStream(errorStream(), onTokensTracked);
-      
-      await expect(async () => {
-        await consumeStream(trackedStream);
-      }).rejects.toThrow("Stream error");
+
+      await expect(consumeStream(trackedStream)).rejects.toThrow("Stream error");
     });
 
     it("should track tokens from multiple RUN_FINISHED chunks (last one wins)", async () => {

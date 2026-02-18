@@ -3,7 +3,7 @@
  * Manages service dependencies and enables easier testing
  */
 
-import { DB } from "@/database";
+import { DB } from "@/infrastructure/db";
 import { CreditManager } from "./credit-manager";
 import { AgentService } from "./agent";
 import { createStorageService } from "./storage/factory";

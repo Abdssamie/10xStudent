@@ -16,7 +16,7 @@ import {
   buildAssetKey,
 } from "@/services/storage/utils";
 import { logger } from "@/utils/logger";
-import { AppError, NotFoundError } from "@/lib/errors";
+import { AppError, NotFoundError } from "@/infrastructure/errors";
 import type { StorageService } from "./interface";
 
 /**

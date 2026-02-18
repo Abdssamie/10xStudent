@@ -3,8 +3,8 @@
  * Uses pgvector for cosine similarity search
  */
 
-import { db } from "@/database";
-import { sources, } from "@/database";
+import { db } from "@/infrastructure/db";
+import { sources, } from "@/infrastructure/db";
 import { sql } from "drizzle-orm";
 import { generateQueryEmbedding } from "@/lib/ai/embeddings.js";
 import type { Logger } from "pino";

@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
 import { logger } from '@/utils/logger';
-import { UnauthorizedError } from '@/lib/errors';
+import { UnauthorizedError } from '@/infrastructure/errors';
 import type { ServiceContainer } from '@/services/container';
 
 declare module 'hono' {

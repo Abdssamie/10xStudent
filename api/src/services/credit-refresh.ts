@@ -1,4 +1,4 @@
-import { db, schema, eq, sql } from "@/database";
+import { db, schema, eq, sql } from "@/infrastructure/db";
 import { lte } from "drizzle-orm";
 import { logger } from "@/utils/logger";
 

@@ -6,7 +6,7 @@
 import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
 import type Redis from "ioredis";
-import { TooManyRequestsError } from "@/lib/errors.js";
+import { TooManyRequestsError } from "@/infrastructure/errors";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 

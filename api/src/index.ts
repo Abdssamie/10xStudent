@@ -10,7 +10,7 @@ import { sentryContext } from './middleware/sentry-context';
 import { createServicesMiddleware } from './middleware/services';
 import { createServiceContainer } from './services/container';
 import { constructApiRoute } from './utils/router';
-import { db } from './database';
+import { db } from './infrastructure/db';
 import { redis, closeRedis } from './lib/redis';
 import { createDefaultRateLimiter } from './middleware/rate-limit';
 

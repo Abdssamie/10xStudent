@@ -4,14 +4,14 @@
  */
 
 import { Hono } from "hono";
-import { schema, eq, and } from "@/database";
+import { schema, eq, and } from "@/infrastructure/db";
 import { scrapeUrl } from "@/lib/firecrawl";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import { detectSourceType } from "@/utils/source-detection";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
-import type { NewSource } from "@/database/schema/sources";
+import type { NewSource } from "@/infrastructure/db/schema/sources";
 import { logger } from "@/utils/logger";
-import { NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/infrastructure/errors";
 import { requireDocumentOwnership, requireSourceOwnership } from "@/utils/ownership";
 
 const { documents, sources } = schema;

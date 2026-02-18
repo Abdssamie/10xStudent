@@ -4,9 +4,9 @@
  */
 
 import { Hono } from "hono";
-import { schema, eq } from "@/database";
+import { schema, eq } from "@/infrastructure/db";
 import { desc, sql } from "drizzle-orm";
-import { NotFoundError } from "@/lib/errors";
+import { NotFoundError } from "@/infrastructure/errors";
 
 const { users, creditLogs } = schema;
 

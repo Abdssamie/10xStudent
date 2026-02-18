@@ -1,5 +1,5 @@
-import { DB, schema, eq, sql } from "@/database";
-import { NotFoundError, InsufficientCreditsError } from "@/lib/errors";
+import { DB, schema, eq, sql } from "@/infrastructure/db";
+import { NotFoundError, InsufficientCreditsError } from "@/infrastructure/errors";
 
 const { users, creditLogs } = schema;
 

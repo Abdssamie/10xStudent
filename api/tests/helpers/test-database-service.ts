@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { sql } from "drizzle-orm";
-import * as schema from "@/database/schema";
-import { DB } from "@/database";
+import * as schema from "@/infrastructure/db/schema";
+import { DB } from "@/infrastructure/db";
 
 /**
  * TestDatabaseService - Per-test-file database service

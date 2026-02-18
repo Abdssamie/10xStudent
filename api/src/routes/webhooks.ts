@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { Webhook } from "svix";
-import { schema, eq } from "@/database";
+import { schema, eq } from "@/infrastructure/db";
 import { logger } from "@/utils/logger";
 
 const { users } = schema;

@@ -133,9 +133,9 @@ export class AgentService {
       tools: this.tools,
     });
 
-    // Wrap stream to capture token usage and persist assistant response
-    const self = this;
-    async function* createTrackedStream() {
+    // Wrap stream to capture token usage
+    const createTrackedStream = (async function* (this: AgentService) {
+      let totalTokens = 0;
       try {
         for await (const chunk of stream) {
           // Capture assistant content from text chunks
@@ -189,7 +189,7 @@ export class AgentService {
         // Handle credit finalization
         if (totalTokens > 0) {
           const actualCost = CREDIT_COSTS.CHAT_COMPLETION(totalTokens);
-          await self.creditManager.finalizeCredits(
+          await this.creditManager.finalizeCredits(
             userId,
             "chat_completion",
             reservation.reservedAmount,
@@ -198,19 +198,19 @@ export class AgentService {
           );
         } else {
           // No tokens used, rollback the reserved credit
-          await self.creditManager.rollbackCredits(
+          await this.creditManager.rollbackCredits(
             userId,
             reservation.reservedAmount,
           );
         }
       } catch (err) {
-        await self.creditManager.rollbackCredits(
+        await this.creditManager.rollbackCredits(
           userId,
           reservation.reservedAmount,
         );
         throw err;
       }
-    }
+    }).bind(this);
 
     return toServerSentEventsResponse(createTrackedStream());
   }

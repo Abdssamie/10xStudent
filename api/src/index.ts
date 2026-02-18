@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
+import { apiReference } from '@scalar/hono-api-reference';
 import { env } from './config/env';
 import { appRouter } from './routes/app';
 import { webhooksRouter } from './routes/webhooks';
@@ -27,6 +28,14 @@ app.use('*', cors({
 }));
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date() }));
+
+// OpenAPI documentation UI (public, no auth required)
+app.get(
+  '/reference',
+  apiReference({
+    url: '/api/v1/doc',
+  })
+);
 
 // Webhooks (no auth required, but needs services)
 app.route(constructApiRoute('/webhooks'), webhooksRouter);

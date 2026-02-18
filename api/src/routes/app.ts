@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 
 import { constructApiRoute } from "@/utils/router";
 import { env } from "@/config/env";
@@ -10,7 +10,7 @@ import { documentsRouter } from "./documents";
 import { sourcesRouter } from "./sources";
 
 
-export const appRouter = new Hono();
+export const appRouter = new OpenAPIHono();
 
 appRouter.get("/", (c) => c.json({ message: "Welcome to 10xStudent API" }));
 
@@ -40,3 +40,19 @@ appRouter.route(
 appRouter.route(
   constructApiRoute("/citations"), citationsRouter
 );
+
+// OpenAPI spec endpoint
+appRouter.doc31(constructApiRoute("/doc"), {
+  openapi: "3.1.0",
+  info: {
+    version: "1.0.0",
+    title: "10xStudent API",
+    description: "AI-powered research platform API",
+  },
+  servers: [
+    {
+      url: "http://localhost:3001",
+      description: "Development server",
+    },
+  ],
+});

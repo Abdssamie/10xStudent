@@ -7,7 +7,7 @@ import { schema, eq, and, type DB } from "@/infrastructure/db";
 import { NotFoundError } from "@/infrastructure/errors";
 import { logger } from "@/utils/logger";
 
-const { documents, sources } = schema;
+const { documents, sources, citations } = schema;
 
 /**
  * Verify document ownership and return the document if owned
@@ -71,4 +71,38 @@ export async function requireSourceOwnership(
   }
 
   return result.source;
+}
+
+/**
+ * Verify citation ownership via its parent document
+ * @throws NotFoundError if citation doesn't exist or user doesn't own it
+ */
+export async function requireCitationOwnership(
+  citationId: string,
+  userId: string,
+  db: DB
+) {
+  logger.debug(
+    { citationId, userId, operation: "verify_citation_ownership" },
+    "Verifying citation ownership"
+  );
+
+  const [result] = await db
+    .select({
+      citation: citations,
+      documentUserId: documents.userId,
+    })
+    .from(citations)
+    .innerJoin(documents, eq(citations.documentId, documents.id))
+    .where(and(eq(citations.id, citationId), eq(documents.userId, userId)));
+
+  if (!result?.citation) {
+    logger.warn(
+      { citationId, userId },
+      "Citation not found or access denied"
+    );
+    throw new NotFoundError("Citation not found");
+  }
+
+  return result.citation;
 }

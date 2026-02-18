@@ -3,6 +3,7 @@ import { Webhook } from "svix";
 import { schema, eq } from "@/infrastructure/db";
 import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
+import { verifyWebhook } from "@clerk/backend/webhooks";
 
 const { users } = schema;
 
@@ -32,11 +33,7 @@ webhooksRouter.post("/clerk", async (c) => {
 
   let event;
   try {
-    event = wh.verify(body, {
-      "svix-id": svixId,
-      "svix-timestamp": svixTimestamp,
-      "svix-signature": svixSignature,
-    }) as any;
+    event = await verifyWebhook(c.req.raw);
   } catch (err) {
     logger.error({ error: err }, "Webhook verification failed");
     return c.json({ error: "Invalid webhook signature" }, 401);
@@ -75,6 +72,11 @@ webhooksRouter.post("/clerk", async (c) => {
   // Handle user.deleted
   if (event.type === "user.deleted") {
     const userId = event.data.id;
+
+    if (!userId) {
+      logger.error("User ID missing in user.deleted event");
+      return c.json({ error: "User ID missing" }, 400);
+    }
 
     try {
       await db.delete(users).where(eq(users.id, userId));

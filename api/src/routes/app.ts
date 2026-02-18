@@ -1,10 +1,12 @@
 import { Hono } from "hono";
+
+import { constructApiRoute } from "@/utils/router";
+import { env } from "@/config/env";
+import { chatRouter } from "./chat";
+import { citationsRouter } from "./citations";
 import { creditsRouter } from "./credits";
 import { documentsRouter } from "./documents";
 import { sourcesRouter } from "./sources";
-import { chatRouter } from "./chat";
-import { constructApiRoute } from "@/utils/router";
-import { env } from "@/config/env";
 
 
 export const appRouter = new Hono();
@@ -30,4 +32,7 @@ appRouter.route(
 );
 appRouter.route(
   constructApiRoute("/chat"), chatRouter
+);
+appRouter.route(
+  constructApiRoute("/citations"), citationsRouter
 );

@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
+import { env } from './config/env';
 import { appRouter } from './routes/app';
 import { webhooksRouter } from './routes/webhooks';
 import { authMiddleware } from './middleware/auth';
@@ -21,7 +22,7 @@ const services = createServiceContainer(db);
 
 app.use('*', logger());
 app.use('*', cors({
-    origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3001'],
+    origin: env.CORS_ORIGINS?.split(',') || ['http://localhost:3001'],
     credentials: true,
 }));
 

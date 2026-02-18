@@ -12,6 +12,7 @@ const envSchema = z.object({
   // Clerk Authentication
   CLERK_SECRET_KEY: z.string().min(1),
   CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
+  CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
 
   // Cloudflare R2 (S3-compatible)
   R2_ACCOUNT_ID: z.string().min(1),
@@ -28,6 +29,9 @@ const envSchema = z.object({
 
   // Firecrawl
   FIRECRAWL_API_KEY: z.string().min(1).optional(),
+
+  // CORS
+  CORS_ORIGINS: z.string().optional(),
 
   // Server
   PORT: z

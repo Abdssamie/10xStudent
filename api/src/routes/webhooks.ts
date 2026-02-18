@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { Webhook } from "svix";
 import { schema, eq } from "@/infrastructure/db";
+import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
 
 const { users } = schema;
@@ -21,7 +22,7 @@ webhooksRouter.post("/clerk", async (c) => {
   const body = await c.req.text();
 
   // Verify webhook signature using CLERK_WEBHOOK_SIGNING_SECRET
-  const webhookSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+  const webhookSecret = env.CLERK_WEBHOOK_SIGNING_SECRET;
   if (!webhookSecret) {
     logger.error("CLERK_WEBHOOK_SIGNING_SECRET not configured");
     return c.json({ error: "Webhook secret not configured" }, 500);

@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 import { UnauthorizedError } from '@/infrastructure/errors';
 import type { ServiceContainer } from '@/services/container';
@@ -37,7 +38,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     try {
         // Verify the session token with Clerk
         const verified = await clerkClient.verifyToken(token, {
-            secretKey: process.env.CLERK_SECRET_KEY,
+            secretKey: env.CLERK_SECRET_KEY,
         });
 
         // Extract user context from verified token

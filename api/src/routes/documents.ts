@@ -1,46 +1,60 @@
-import { Hono } from "hono";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { schema, eq, and } from "@/infrastructure/db";
 import { authMiddleware } from "@/middleware/auth";
 import { logger } from "@/utils/logger";
-import { NotFoundError, ValidationError } from "@/infrastructure/errors";
+import { NotFoundError } from "@/infrastructure/errors";
 import { requireDocumentOwnership } from "@/utils/ownership";
-
-import { createDocumentSchema } from "@shared/src/document";
+import {
+  createDocumentSchema,
+  documentResponseSchema,
+  updateDocumentBodySchema,
+} from "@shared/src";
 
 const { documents } = schema;
 
-export const documentsRouter = new Hono();
+export const documentsRouter = new OpenAPIHono();
 
-// POST /documents - Create a new document
-documentsRouter.post("/", async (c) => {
+const createDocumentRoute = createRoute({
+  method: "post",
+  path: "/",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: createDocumentSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: documentResponseSchema,
+        },
+      },
+      description: "Document created successfully",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(createDocumentRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
   const services = c.get("services");
   const db = services.db;
   const storageService = services.storageService;
 
-  const body = await c.req.json();
-  const parsed = createDocumentSchema.safeParse(body);
+  const { title, template, citationFormat } = c.req.valid("json");
 
-  if (!parsed.success) {
-    throw new ValidationError("Invalid request", parsed.error.flatten());
-  }
-
-  const { title, template, citationFormat } = parsed.data;
-
-  // Generate document ID
   const documentId = crypto.randomUUID();
-
-  // Create minimal Typst stub content
   const stubContent = `= ${title}\n\n`;
 
-  // Upload stub file to R2 using storage service
   await storageService.uploadDocument(userId, documentId, stubContent);
 
-  // Build R2 key for database storage
   const typstKey = `documents/${userId}/${documentId}/main.typ`;
 
-  // Create document in database
   const [document] = await db
     .insert(documents)
     .values({
@@ -53,11 +67,28 @@ documentsRouter.post("/", async (c) => {
     })
     .returning();
 
+  if (!document) throw new NotFoundError("Failed to create document");
+
   return c.json(document);
 });
 
-// GET /documents - List user's documents
-documentsRouter.get("/", async (c) => {
+const listDocumentsRoute = createRoute({
+  method: "get",
+  path: "/",
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.array(documentResponseSchema),
+        },
+      },
+      description: "List of user documents",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(listDocumentsRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
   const services = c.get("services");
@@ -71,58 +102,92 @@ documentsRouter.get("/", async (c) => {
   return c.json(userDocuments);
 });
 
-// PATCH /documents/:id - Update document metadata
-documentsRouter.patch("/:id", async (c) => {
+const updateDocumentRoute = createRoute({
+  method: "patch",
+  path: "/{id}",
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: updateDocumentBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: documentResponseSchema,
+        },
+      },
+      description: "Document updated successfully",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(updateDocumentRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("id");
+  const { id: documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
 
-  // Verify document ownership
   await requireDocumentOwnership(documentId, userId, db);
 
-  const body = await c.req.json();
-  const { title, template, citationFormat } = body;
-
-  // Build update object with only provided fields
+  const body = c.req.valid("json");
   const updates: Record<string, string> = {};
-  if (title !== undefined) updates.title = title;
-  if (template !== undefined) updates.template = template;
-  if (citationFormat !== undefined) updates.citationFormat = citationFormat;
+  if (body.title !== undefined) updates.title = body.title;
+  if (body.template !== undefined) updates.template = body.template;
+  if (body.citationFormat !== undefined) updates.citationFormat = body.citationFormat;
 
-  // Update document
   const [updated] = await db
     .update(documents)
     .set(updates)
     .where(eq(documents.id, documentId))
     .returning();
 
+  if (!updated) throw new NotFoundError("Failed to update document");
+
   return c.json(updated);
 });
 
-// DELETE /documents/:id - Delete document
-documentsRouter.delete("/:id", async (c) => {
+const deleteDocumentRoute = createRoute({
+  method: "delete",
+  path: "/{id}",
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+  },
+  responses: {
+    204: {
+      description: "Document deleted successfully",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(deleteDocumentRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("id");
+  const { id: documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
   const storageService = services.storageService;
 
-  // Verify ownership and get document
-  const document = await requireDocumentOwnership(documentId, userId, db);
+  await requireDocumentOwnership(documentId, userId, db);
 
-  // Delete from R2 using storage service
   try {
     await storageService.deleteDocument(userId, documentId);
   } catch (error) {
-    // Log error but continue with DB deletion
-    // Sentry will automatically capture this via the error handler
     logger.error({ error, documentId }, "Failed to delete from R2 - continuing with DB deletion");
   }
 
-  // Delete from database
   await db
     .delete(documents)
     .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));

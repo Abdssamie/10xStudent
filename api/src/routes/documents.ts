@@ -9,6 +9,7 @@ import {
   documentResponseSchema,
   updateDocumentBodySchema,
   documentContentResponseSchema,
+  updateDocumentContentBodySchema,
 } from "@shared/src";
 
 const { documents } = schema;
@@ -232,4 +233,50 @@ documentsRouter.openapi(getDocumentContentRoute, async (c) => {
   logger.info({ userId, documentId }, "Document content retrieved");
 
   return c.json({ content });
+});
+
+const updateDocumentContentRoute = createRoute({
+  method: "put",
+  path: "/{id}/content",
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: updateDocumentContentBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean() }),
+        },
+      },
+      description: "Document content updated successfully",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(updateDocumentContentRoute, async (c) => {
+  const auth = c.get("auth");
+  const userId = auth.userId;
+  const { id: documentId } = c.req.valid("param");
+  const { content } = c.req.valid("json");
+  const services = c.get("services");
+  const db = services.db;
+  const storageService = services.storageService;
+
+  await requireDocumentOwnership(documentId, userId, db);
+
+  await storageService.uploadDocument(userId, documentId, content);
+
+  logger.info({ userId, documentId, contentLength: content.length }, "Document content updated");
+
+  return c.json({ success: true });
 });

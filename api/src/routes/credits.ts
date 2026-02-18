@@ -3,17 +3,38 @@
  * Exposes user credit balance and transaction history.
  */
 
-import { Hono } from "hono";
-import { schema, eq } from "@/infrastructure/db";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { desc, sql } from "drizzle-orm";
+
+import {
+  creditsBalanceResponseSchema,
+  creditsHistoryResponseSchema,
+} from "@shared/src/api/credits";
+
+import { schema, eq } from "@/infrastructure/db";
 import { NotFoundError } from "@/infrastructure/errors";
 
 const { users, creditLogs } = schema;
 
-export const creditsRouter = new Hono();
+export const creditsRouter = new OpenAPIHono();
 
-// GET /credits - Get user credit balance
-creditsRouter.get("/", async (c) => {
+const getCreditsBalanceRoute = createRoute({
+  method: "get",
+  path: "/",
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: creditsBalanceResponseSchema,
+        },
+      },
+      description: "User credit balance and usage",
+    },
+  },
+  tags: ["Credits"],
+});
+
+creditsRouter.openapi(getCreditsBalanceRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
   const services = c.get("services");
@@ -48,8 +69,29 @@ creditsRouter.get("/", async (c) => {
   });
 });
 
-// GET /credits/history - Get paginated transaction log
-creditsRouter.get("/history", async (c) => {
+const getCreditsHistoryRoute = createRoute({
+  method: "get",
+  path: "/history",
+  request: {
+    query: z.object({
+      cursor: z.string().uuid().optional(),
+      limit: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: creditsHistoryResponseSchema,
+        },
+      },
+      description: "Paginated credit transaction history",
+    },
+  },
+  tags: ["Credits"],
+});
+
+creditsRouter.openapi(getCreditsHistoryRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
   const services = c.get("services");

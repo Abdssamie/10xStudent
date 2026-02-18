@@ -3,16 +3,18 @@
  * Manage document assets (images, files) stored in R2
  */
 
-import { Hono } from "hono";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+
+import { assetResponseSchema } from "@shared/src/api/assets";
 
 import { schema, eq, and } from "@/infrastructure/db";
-import { logger } from "@/utils/logger";
 import { NotFoundError, ValidationError } from "@/infrastructure/errors";
+import { logger } from "@/utils/logger";
 import { requireDocumentOwnership } from "@/utils/ownership";
 
 const { assets } = schema;
 
-export const assetsRouter = new Hono();
+export const assetsRouter = new OpenAPIHono();
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = [
@@ -33,11 +35,40 @@ function buildR2Key(userId: string, documentId: string, filename: string): strin
   return `documents/${userId}/${documentId}/assets/${filename}`;
 }
 
-// POST /assets/:documentId - Upload an asset
-assetsRouter.post("/:documentId", async (c) => {
+const uploadAssetRoute = createRoute({
+  method: "post",
+  path: "/{documentId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+    }),
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: z.object({
+            file: z.any(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        "application/json": {
+          schema: assetResponseSchema,
+        },
+      },
+      description: "Asset uploaded successfully",
+    },
+  },
+  tags: ["Assets"],
+});
+
+assetsRouter.openapi(uploadAssetRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("documentId");
+  const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
   const storageService = services.storageService;
@@ -98,11 +129,31 @@ assetsRouter.post("/:documentId", async (c) => {
   return c.json(asset, 201);
 });
 
-// GET /assets/:documentId - List all assets for a document
-assetsRouter.get("/:documentId", async (c) => {
+const listAssetsRoute = createRoute({
+  method: "get",
+  path: "/{documentId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.array(assetResponseSchema),
+        },
+      },
+      description: "List of document assets",
+    },
+  },
+  tags: ["Assets"],
+});
+
+assetsRouter.openapi(listAssetsRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("documentId");
+  const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
 
@@ -122,12 +173,32 @@ assetsRouter.get("/:documentId", async (c) => {
   return c.json(documentAssets);
 });
 
-// GET /assets/:documentId/:assetId - Get a specific asset
-assetsRouter.get("/:documentId/:assetId", async (c) => {
+const getAssetRoute = createRoute({
+  method: "get",
+  path: "/{documentId}/{assetId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+      assetId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/octet-stream": {
+          schema: z.any(),
+        },
+      },
+      description: "Asset file content",
+    },
+  },
+  tags: ["Assets"],
+});
+
+assetsRouter.openapi(getAssetRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("documentId");
-  const assetId = c.req.param("assetId");
+  const { documentId, assetId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
   const storageService = services.storageService;
@@ -160,12 +231,27 @@ assetsRouter.get("/:documentId/:assetId", async (c) => {
   });
 });
 
-// DELETE /assets/:documentId/:assetId - Delete an asset
-assetsRouter.delete("/:documentId/:assetId", async (c) => {
+const deleteAssetRoute = createRoute({
+  method: "delete",
+  path: "/{documentId}/{assetId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+      assetId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    204: {
+      description: "Asset deleted successfully",
+    },
+  },
+  tags: ["Assets"],
+});
+
+assetsRouter.openapi(deleteAssetRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("documentId");
-  const assetId = c.req.param("assetId");
+  const { documentId, assetId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
   const storageService = services.storageService;

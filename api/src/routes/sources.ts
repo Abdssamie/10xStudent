@@ -3,41 +3,66 @@
  * Enables users to add, list, update, and delete research sources for their documents.
  */
 
-import { Hono } from "hono";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+
+import {
+  createSourceSchema,
+  sourceResponseSchema,
+  updateSourceSchema,
+} from "@shared/src/api/sources";
+
 import { schema, eq, and } from "@/infrastructure/db";
-import { scrapeUrl } from "@/lib/firecrawl";
-import { generateEmbedding } from "@/lib/ai/embeddings";
-import { detectSourceType } from "@/utils/source-detection";
-import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
 import type { NewSource } from "@/infrastructure/db/schema/sources";
+import { NotFoundError } from "@/infrastructure/errors";
+import { generateEmbedding } from "@/lib/ai/embeddings";
+import { scrapeUrl } from "@/lib/firecrawl";
 import { logger } from "@/utils/logger";
-import { NotFoundError, ValidationError } from "@/infrastructure/errors";
 import { requireDocumentOwnership, requireSourceOwnership } from "@/utils/ownership";
+import { detectSourceType } from "@/utils/source-detection";
 
 const { documents, sources } = schema;
 
-export const sourcesRouter = new Hono();
+export const sourcesRouter = new OpenAPIHono();
 
-// POST /sources/:documentId - Add a source by URL
-sourcesRouter.post("/:documentId", async (c) => {
+const createSourceRoute = createRoute({
+  method: "post",
+  path: "/{documentId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: createSourceSchema.omit({ documentId: true }),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        "application/json": {
+          schema: sourceResponseSchema,
+        },
+      },
+      description: "Source created successfully",
+    },
+  },
+  tags: ["Sources"],
+});
+
+sourcesRouter.openapi(createSourceRoute, async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
-    const documentId = c.req.param("documentId");
+    const { documentId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;
 
     // Verify document ownership
     await requireDocumentOwnership(documentId, userId, db);
 
-    // Parse and validate request body
-    const body = await c.req.json();
-    const parsed = createSourceSchema.safeParse({ ...body, documentId });
-
-    if (!parsed.success) {
-        throw new ValidationError("Invalid request", parsed.error.flatten());
-    }
-
-    const { url, citationKey } = parsed.data;
+    const { url, citationKey } = c.req.valid("json");
 
     try {
         // Step 1: Scrape URL for metadata
@@ -74,6 +99,8 @@ sourcesRouter.post("/:documentId", async (c) => {
         // Step 5: Insert into database
         const [inserted] = await db.insert(sources).values(sourceInsert).returning();
 
+        if (!inserted) throw new NotFoundError("Failed to create source");
+
         return c.json(inserted, 201);
     } catch (error) {
         logger.error({ error, url, documentId }, "Failed to add source");
@@ -81,11 +108,31 @@ sourcesRouter.post("/:documentId", async (c) => {
     }
 });
 
-// GET /sources/:documentId - List all sources for a document
-sourcesRouter.get("/:documentId", async (c) => {
+const listSourcesRoute = createRoute({
+  method: "get",
+  path: "/{documentId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.array(sourceResponseSchema),
+        },
+      },
+      description: "List of document sources",
+    },
+  },
+  tags: ["Sources"],
+});
+
+sourcesRouter.openapi(listSourcesRoute, async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
-    const documentId = c.req.param("documentId");
+    const { documentId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;
 
@@ -108,31 +155,52 @@ sourcesRouter.get("/:documentId", async (c) => {
     return c.json(documentSources);
 });
 
-// PATCH /sources/:sourceId - Update source metadata
-sourcesRouter.patch("/:sourceId", async (c) => {
+const updateSourceRoute = createRoute({
+  method: "patch",
+  path: "/{sourceId}",
+  request: {
+    params: z.object({
+      sourceId: z.string().uuid(),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: updateSourceSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: sourceResponseSchema,
+        },
+      },
+      description: "Source updated successfully",
+    },
+  },
+  tags: ["Sources"],
+});
+
+sourcesRouter.openapi(updateSourceRoute, async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
-    const sourceId = c.req.param("sourceId");
+    const { sourceId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;
 
     // Verify source ownership
     await requireSourceOwnership(sourceId, userId, db);
 
-    // Parse and validate request body
-    const body = await c.req.json();
-    const parsed = updateSourceSchema.safeParse(body);
-
-    if (!parsed.success) {
-        throw new ValidationError("Invalid request", parsed.error.flatten());
-    }
+    const body = c.req.valid("json");
 
     // Build update object with only provided fields
     const updates: Record<string, unknown> = {};
-    if (parsed.data.title !== undefined) updates.title = parsed.data.title;
-    if (parsed.data.author !== undefined) updates.author = parsed.data.author;
-    if (parsed.data.publicationDate !== undefined) {
-        updates.publicationDate = new Date(parsed.data.publicationDate);
+    if (body.title !== undefined) updates.title = body.title;
+    if (body.author !== undefined) updates.author = body.author;
+    if (body.publicationDate !== undefined) {
+        updates.publicationDate = new Date(body.publicationDate);
     }
 
     const [updated] = await db
@@ -141,14 +209,31 @@ sourcesRouter.patch("/:sourceId", async (c) => {
         .where(eq(sources.id, sourceId))
         .returning();
 
+    if (!updated) throw new NotFoundError("Failed to update source");
+
     return c.json(updated);
 });
 
-// DELETE /sources/:sourceId - Delete a source
-sourcesRouter.delete("/:sourceId", async (c) => {
+const deleteSourceRoute = createRoute({
+  method: "delete",
+  path: "/{sourceId}",
+  request: {
+    params: z.object({
+      sourceId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    204: {
+      description: "Source deleted successfully",
+    },
+  },
+  tags: ["Sources"],
+});
+
+sourcesRouter.openapi(deleteSourceRoute, async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
-    const sourceId = c.req.param("sourceId");
+    const { sourceId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;
 

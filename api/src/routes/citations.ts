@@ -3,43 +3,58 @@
  * Manage in-text citations linking documents to sources
  */
 
-import { Hono } from "hono";
-import { z } from "zod";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+
+import { createCitationBodySchema, citationResponseSchema } from "@shared/src/api/citations";
 
 import { schema, eq, and, sql } from "@/infrastructure/db";
+import { NotFoundError } from "@/infrastructure/errors";
 import { logger } from "@/utils/logger";
-import { NotFoundError, ValidationError } from "@/infrastructure/errors";
 import { requireDocumentOwnership, requireCitationOwnership } from "@/utils/ownership";
 
 const { documents, citations, sources } = schema;
 
-export const citationsRouter = new Hono();
+export const citationsRouter = new OpenAPIHono();
 
-const createCitationSchema = z.object({
-  sourceId: z.string().uuid("Invalid source ID"),
-  position: z.number().int().min(0, "Position must be non-negative"),
+const createCitationRoute = createRoute({
+  method: "post",
+  path: "/{documentId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: createCitationBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        "application/json": {
+          schema: citationResponseSchema,
+        },
+      },
+      description: "Citation created successfully",
+    },
+  },
+  tags: ["Citations"],
 });
 
-// POST /citations/:documentId - Create a citation
-citationsRouter.post("/:documentId", async (c) => {
+citationsRouter.openapi(createCitationRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("documentId");
+  const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
 
   // Verify document ownership
   const document = await requireDocumentOwnership(documentId, userId, db);
 
-  // Parse and validate request body
-  const body = await c.req.json();
-  const parsed = createCitationSchema.safeParse(body);
-
-  if (!parsed.success) {
-    throw new ValidationError("Invalid request", parsed.error.flatten());
-  }
-
-  const { sourceId, position } = parsed.data;
+  const { sourceId, position } = c.req.valid("json");
 
   // Verify source exists and belongs to this document
   const [source] = await db
@@ -91,11 +106,41 @@ citationsRouter.post("/:documentId", async (c) => {
   return c.json(citation, 201);
 });
 
-// GET /citations/:documentId - List all citations for a document
-citationsRouter.get("/:documentId", async (c) => {
+const listCitationsRoute = createRoute({
+  method: "get",
+  path: "/{documentId}",
+  request: {
+    params: z.object({
+      documentId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.array(
+            citationResponseSchema.extend({
+              source: z.object({
+                id: z.string().uuid(),
+                url: z.string().url(),
+                title: z.string().nullable(),
+                author: z.string().nullable(),
+                citationKey: z.string().nullable(),
+              }),
+            })
+          ),
+        },
+      },
+      description: "List of document citations with source details",
+    },
+  },
+  tags: ["Citations"],
+});
+
+citationsRouter.openapi(listCitationsRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const documentId = c.req.param("documentId");
+  const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
 
@@ -105,6 +150,7 @@ citationsRouter.get("/:documentId", async (c) => {
   const documentCitations = await db
     .select({
       id: citations.id,
+      documentId: citations.documentId,
       sourceId: citations.sourceId,
       citationNumber: citations.citationNumber,
       position: citations.position,
@@ -125,11 +171,26 @@ citationsRouter.get("/:documentId", async (c) => {
   return c.json(documentCitations);
 });
 
-// DELETE /citations/:citationId - Delete a citation
-citationsRouter.delete("/:citationId", async (c) => {
+const deleteCitationRoute = createRoute({
+  method: "delete",
+  path: "/{citationId}",
+  request: {
+    params: z.object({
+      citationId: z.string().uuid(),
+    }),
+  },
+  responses: {
+    204: {
+      description: "Citation deleted successfully",
+    },
+  },
+  tags: ["Citations"],
+});
+
+citationsRouter.openapi(deleteCitationRoute, async (c) => {
   const auth = c.get("auth");
   const userId = auth.userId;
-  const citationId = c.req.param("citationId");
+  const { citationId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
 

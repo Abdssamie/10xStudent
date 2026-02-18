@@ -1,4 +1,6 @@
-// Import Sentry first to ensure proper instrumentation
+// CRITICAL: Import Sentry instrumentation FIRST before any other imports
+import "./instrument.js";
+
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
@@ -28,6 +30,13 @@ app.use('*', cors({
 }));
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date() }));
+
+// Debug route to test Sentry error tracking (remove in production)
+if (env.NODE_ENV !== 'production') {
+  app.get('/debug-sentry', (c) => {
+    throw new Error('Test Sentry error - this is intentional!');
+  });
+}
 
 // OpenAPI documentation UI (public, no auth required)
 app.get(

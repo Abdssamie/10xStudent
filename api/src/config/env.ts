@@ -74,11 +74,19 @@ const envSchema = z.object({
 });
 
 // Validate environment variables at startup
+// Skip validation in test environment if running setup
 const result = envSchema.safeParse(process.env);
 
 if (!result.success) {
-  console.error("❌ Invalid environment variables:");
-  console.error(result.error.message);
+  // In test environment, provide more helpful error message
+  if (process.env.NODE_ENV === "test") {
+    console.error("❌ Invalid environment variables in test environment:");
+    console.error("Make sure tests/setup.ts is loaded before importing env.ts");
+    console.error(result.error.message);
+  } else {
+    console.error("❌ Invalid environment variables:");
+    console.error(result.error.message);
+  }
   throw new Error("Invalid environment variables");
 }
 

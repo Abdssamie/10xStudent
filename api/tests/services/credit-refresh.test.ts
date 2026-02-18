@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CreditRefreshService } from "../../src/services/credit-refresh";
 
 // Mock the database module
-vi.mock("@/database", () => ({
+vi.mock("@/infrastructure/db", () => ({
   db: {
     transaction: vi.fn(),
   },
@@ -17,6 +17,10 @@ vi.mock("@/database", () => ({
 // Mock drizzle-orm
 vi.mock("drizzle-orm", () => ({
   lte: vi.fn(),
+  relations: vi.fn(),
+  eq: vi.fn(),
+  and: vi.fn(),
+  sql: vi.fn(),
 }));
 
 describe("CreditRefreshService", () => {
@@ -28,7 +32,7 @@ describe("CreditRefreshService", () => {
     vi.clearAllMocks();
 
     // Get the mocked schema
-    const database = await import("@/database");
+    const database = await import("@/infrastructure/db");
     schema = database.schema;
 
     // Create a mock for Drizzle's fluent API

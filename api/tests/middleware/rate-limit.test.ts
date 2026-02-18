@@ -114,7 +114,7 @@ describe("Rate Limiting Middleware", () => {
   });
 
   it("should skip rate limiting for unauthenticated users when configured", async () => {
-    const rateLimiter = createRateLimitMiddleware(mockRedis, {
+    const rateLimiter = createRateLimitMiddleware(redis, {
       windowMs: 60000,
       maxRequests: 1,
       keyPrefix: "test",

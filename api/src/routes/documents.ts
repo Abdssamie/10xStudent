@@ -4,12 +4,14 @@ import { authMiddleware } from "@/middleware/auth";
 import { logger } from "@/utils/logger";
 import { NotFoundError } from "@/infrastructure/errors";
 import { requireDocumentOwnership } from "@/utils/ownership";
+import { generateBibTex } from "@/utils/bibtex";
 import {
   createDocumentSchema,
   documentResponseSchema,
   updateDocumentBodySchema,
   documentContentResponseSchema,
   updateDocumentContentBodySchema,
+  bibliographyResponseSchema,
 } from "@shared/src";
 
 const { documents } = schema;
@@ -279,4 +281,66 @@ documentsRouter.openapi(updateDocumentContentRoute, async (c) => {
   logger.info({ userId, documentId, contentLength: content.length }, "Document content updated");
 
   return c.json({ success: true });
+});
+
+const getDocumentBibliographyRoute = createRoute({
+  method: "get",
+  path: "/{id}/bibliography",
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: bibliographyResponseSchema,
+        },
+      },
+      description: "Document bibliography retrieved successfully",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(getDocumentBibliographyRoute, async (c) => {
+  const auth = c.get("auth");
+  const userId = auth.userId;
+  const { id: documentId } = c.req.valid("param");
+  const services = c.get("services");
+  const db = services.db;
+  const storageService = services.storageService;
+
+  await requireDocumentOwnership(documentId, userId, db);
+
+  // Try to retrieve cached bibliography from R2
+  try {
+    const cachedBibliography = await storageService.getBibliography(userId, documentId);
+    logger.debug({ userId, documentId }, "Bibliography retrieved from cache");
+    return c.json({ bibliography: cachedBibliography });
+  } catch (error) {
+    logger.debug({ userId, documentId }, "Bibliography cache miss, generating fresh");
+  }
+
+  // Cache miss - generate fresh bibliography
+  const documentSources = await db
+    .select()
+    .from(schema.sources)
+    .where(eq(schema.sources.documentId, documentId));
+
+  const bibtexEntries = documentSources.map((source) => generateBibTex(source));
+  const bibliography = bibtexEntries.join("\n\n");
+
+  // Cache the result in R2
+  try {
+    await storageService.uploadBibliography(userId, documentId, bibliography);
+    logger.debug({ userId, documentId }, "Bibliography cached successfully");
+  } catch (error) {
+    logger.error({ error, userId, documentId }, "Failed to cache bibliography");
+  }
+
+  logger.info({ userId, documentId, sourceCount: documentSources.length }, "Bibliography generated");
+
+  return c.json({ bibliography });
 });

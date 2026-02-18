@@ -66,7 +66,7 @@ describe("Rate Limiting Middleware", () => {
       await next();
     });
 
-    const rateLimiter = createRateLimitMiddleware(mockRedis, {
+    const rateLimiter = createRateLimitMiddleware(redis, {
       windowMs: 60000,
       maxRequests: 5,
       keyPrefix: "test",

@@ -10,7 +10,7 @@ import {
   validateUserId,
   validateDocumentId,
   sanitizeFilename,
-} from "@/services/r2-storage";
+} from "@/services/storage/utils";
 
 describe("validateUserId", () => {
   it("accepts valid UUID v4", () => {

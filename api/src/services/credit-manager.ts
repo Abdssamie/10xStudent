@@ -1,8 +1,15 @@
-import { db, schema, eq, sql } from "@/database";
+import { DB, schema, eq, sql } from "@/infrastructure/db";
+import { NotFoundError, InsufficientCreditsError } from "@/infrastructure/errors";
 
 const { users, creditLogs } = schema;
 
 export class CreditManager {
+  private db: DB;
+
+  constructor(db: DB) {
+    this.db = db;
+  }
+
   /**
    * Check if user has enough credits (with pessimistic lock)
    * Returns locked user record or throws error
@@ -15,7 +22,7 @@ export class CreditManager {
     reservedAmount: number;
     remainingCredits: number;
   }> {
-    return await db.transaction(async (tx) => {
+    return await this.db.transaction(async (tx) => {
       // Lock user row for update
       const [user] = await tx
         .select()
@@ -24,12 +31,13 @@ export class CreditManager {
         .for("update");
 
       if (!user) {
-        throw new Error("User not found");
+        throw new NotFoundError("User not found");
       }
 
       if (user.credits < estimatedCost) {
-        throw new Error(
+        throw new InsufficientCreditsError(
           `Insufficient credits. Have: ${user.credits}, Need: ${estimatedCost}`,
+          { available: user.credits, required: estimatedCost }
         );
       }
 
@@ -57,7 +65,7 @@ export class CreditManager {
     actualCost: number,
     tokensUsed?: number,
   ): Promise<{ refunded: number; finalCost: number }> {
-    return await db.transaction(async (tx) => {
+    return await this.db.transaction(async (tx) => {
       const refund = reservedAmount - actualCost;
 
       if (refund > 0) {
@@ -90,7 +98,7 @@ export class CreditManager {
    * Rollback reserved credits on error
    */
   async rollbackCredits(userId: string, amount: number): Promise<void> {
-    await db
+    await this.db
       .update(users)
       .set({ credits: sql`${users.credits} + ${amount}` })
       .where(eq(users.id, userId));

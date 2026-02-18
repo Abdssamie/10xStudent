@@ -1,4 +1,4 @@
-import { type Source } from "@/database/schema/sources";
+import { type Source } from "@/infrastructure/db/schema/sources";
 import { type SourceType } from "@shared/src/source-type";
 
 export function mapSourceTypeToBibTex(type: SourceType | string): string {

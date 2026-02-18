@@ -1,5 +1,9 @@
 import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import { env } from '@/config/env';
+import { logger } from '@/utils/logger';
+import { UnauthorizedError } from '@/infrastructure/errors';
+import type { ServiceContainer } from '@/services/container';
 
 declare module 'hono' {
     interface ContextVariableMap {
@@ -8,6 +12,7 @@ declare module 'hono' {
             sessionId: string;
             orgId?: string;
         };
+        services: ServiceContainer;
     }
 }
 
@@ -19,25 +24,21 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     const authHeader = c.req.header('Authorization');
 
     if (!authHeader?.startsWith('Bearer ')) {
-        return c.json({ 
-            error: 'Unauthorized',
-            message: 'Missing or invalid Authorization header. Expected format: Bearer <token>' 
-        }, 401);
+        throw new UnauthorizedError(
+            'Missing or invalid Authorization header. Expected format: Bearer <token>'
+        );
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     if (!token) {
-        return c.json({ 
-            error: 'Unauthorized',
-            message: 'Token is empty' 
-        }, 401);
+        throw new UnauthorizedError('Token is empty');
     }
 
     try {
         // Verify the session token with Clerk
         const verified = await clerkClient.verifyToken(token, {
-            secretKey: process.env.CLERK_SECRET_KEY,
+            secretKey: env.CLERK_SECRET_KEY,
         });
 
         // Extract user context from verified token
@@ -49,12 +50,8 @@ export const authMiddleware = createMiddleware(async (c, next) => {
 
         await next();
     } catch (error) {
-        console.error('Token verification failed:', error);
-        
-        return c.json({ 
-            error: 'Unauthorized',
-            message: 'Invalid or expired token' 
-        }, 401);
+        logger.error({ error }, 'Token verification failed');
+        throw new UnauthorizedError('Invalid or expired token');
     }
 });
 

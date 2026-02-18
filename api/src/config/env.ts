@@ -12,6 +12,7 @@ const envSchema = z.object({
   // Clerk Authentication
   CLERK_SECRET_KEY: z.string().min(1),
   CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
+  CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
 
   // Cloudflare R2 (S3-compatible)
   R2_ACCOUNT_ID: z.string().min(1),
@@ -29,6 +30,9 @@ const envSchema = z.object({
   // Firecrawl
   FIRECRAWL_API_KEY: z.string().min(1).optional(),
 
+  // CORS
+  CORS_ORIGINS: z.string().optional(),
+
   // Server
   PORT: z
     .string()
@@ -38,6 +42,35 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+
+  // Sentry
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseFloat(val) : undefined))
+    .pipe(z.number().min(0).max(1).optional()),
+
+  // Redis
+  REDIS_URL: z.string().url(),
+
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z
+    .string()
+    .default("60000")
+    .transform(Number)
+    .pipe(z.number().int().positive()),
+  RATE_LIMIT_MAX_REQUESTS: z
+    .string()
+    .default("100")
+    .transform(Number)
+    .pipe(z.number().int().positive()),
+  RATE_LIMIT_AI_MAX_REQUESTS: z
+    .string()
+    .default("10")
+    .transform(Number)
+    .pipe(z.number().int().positive()),
 });
 
 // Validate environment variables at startup

@@ -4,67 +4,37 @@
  */
 
 import { Hono } from "hono";
-import { db, schema, eq, and } from "@/database";
-import { authMiddleware } from "@/middleware/auth";
-import { scrapeUrl } from "@/services/firecrawl";
-import { generateEmbedding } from "@/lib/embeddings";
+import { schema, eq, and } from "@/infrastructure/db";
+import { scrapeUrl } from "@/lib/firecrawl";
+import { generateEmbedding } from "@/lib/ai/embeddings";
 import { detectSourceType } from "@/utils/source-detection";
 import { createSourceSchema, updateSourceSchema } from "@shared/src/source";
-import type { NewSource } from "@/database/schema/sources";
+import type { NewSource } from "@/infrastructure/db/schema/sources";
+import { logger } from "@/utils/logger";
+import { NotFoundError, ValidationError } from "@/infrastructure/errors";
+import { requireDocumentOwnership, requireSourceOwnership } from "@/utils/ownership";
 
 const { documents, sources } = schema;
 
 export const sourcesRouter = new Hono();
-
-/**
- * Verify that a document belongs to the authenticated user.
- * Returns the document if owned, null otherwise.
- */
-async function verifyDocumentOwnership(documentId: string, userId: string) {
-    const [document] = await db
-        .select()
-        .from(documents)
-        .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
-    return document || null;
-}
-
-/**
- * Verify source ownership via its parent document.
- * Returns the source if owned, null otherwise.
- */
-async function verifySourceOwnership(sourceId: string, userId: string) {
-    const [source] = await db
-        .select({
-            source: sources,
-            documentUserId: documents.userId,
-        })
-        .from(sources)
-        .innerJoin(documents, eq(sources.documentId, documents.id))
-        .where(and(eq(sources.id, sourceId), eq(documents.userId, userId)));
-    return source?.source || null;
-}
 
 // POST /sources/:documentId - Add a source by URL
 sourcesRouter.post("/:documentId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const documentId = c.req.param("documentId");
+    const services = c.get("services");
+    const db = services.db;
 
     // Verify document ownership
-    const document = await verifyDocumentOwnership(documentId, userId);
-    if (!document) {
-        return c.json({ error: "Document not found" }, 404);
-    }
+    await requireDocumentOwnership(documentId, userId, db);
 
     // Parse and validate request body
     const body = await c.req.json();
     const parsed = createSourceSchema.safeParse({ ...body, documentId });
 
     if (!parsed.success) {
-        return c.json(
-            { error: "Invalid request", details: parsed.error.message },
-            400
-        );
+        throw new ValidationError("Invalid request", parsed.error.flatten());
     }
 
     const { url, citationKey } = parsed.data;
@@ -106,8 +76,8 @@ sourcesRouter.post("/:documentId", async (c) => {
 
         return c.json(inserted, 201);
     } catch (error) {
-        console.error("Failed to add source:", error);
-        return c.json({ error: "Failed to process source" }, 500);
+        logger.error({ error, url, documentId }, "Failed to add source");
+        throw error;
     }
 });
 
@@ -116,12 +86,11 @@ sourcesRouter.get("/:documentId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const documentId = c.req.param("documentId");
+    const services = c.get("services");
+    const db = services.db;
 
     // Verify document ownership
-    const document = await verifyDocumentOwnership(documentId, userId);
-    if (!document) {
-        return c.json({ error: "Document not found" }, 404);
-    }
+    await requireDocumentOwnership(documentId, userId, db);
 
     const documentSources = await db
         .select({
@@ -144,22 +113,18 @@ sourcesRouter.patch("/:sourceId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const sourceId = c.req.param("sourceId");
+    const services = c.get("services");
+    const db = services.db;
 
     // Verify source ownership
-    const source = await verifySourceOwnership(sourceId, userId);
-    if (!source) {
-        return c.json({ error: "Source not found" }, 404);
-    }
+    await requireSourceOwnership(sourceId, userId, db);
 
     // Parse and validate request body
     const body = await c.req.json();
     const parsed = updateSourceSchema.safeParse(body);
 
     if (!parsed.success) {
-        return c.json(
-            { error: "Invalid request", details: parsed.error.message },
-            400
-        );
+        throw new ValidationError("Invalid request", parsed.error.flatten());
     }
 
     // Build update object with only provided fields
@@ -184,12 +149,11 @@ sourcesRouter.delete("/:sourceId", async (c) => {
     const auth = c.get("auth");
     const userId = auth.userId;
     const sourceId = c.req.param("sourceId");
+    const services = c.get("services");
+    const db = services.db;
 
     // Verify source ownership
-    const source = await verifySourceOwnership(sourceId, userId);
-    if (!source) {
-        return c.json({ error: "Source not found" }, 404);
-    }
+    await requireSourceOwnership(sourceId, userId, db);
 
     await db.delete(sources).where(eq(sources.id, sourceId));
 

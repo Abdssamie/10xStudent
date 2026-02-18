@@ -1,5 +1,6 @@
-import { db, schema, eq, sql } from "@/database";
+import { db, schema, eq, sql } from "@/infrastructure/db";
 import { lte } from "drizzle-orm";
+import { logger } from "@/utils/logger";
 
 const { users, creditLogs } = schema;
 
@@ -133,7 +134,7 @@ export class CreditRefreshService {
           successful++;
         }
       } catch (error) {
-        console.error(`Failed to refresh credits for user ${user.id}:`, error);
+        logger.error({ userId: user.id, error }, "Failed to refresh credits for user");
         failed++;
       }
     }

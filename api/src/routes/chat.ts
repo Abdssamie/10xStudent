@@ -1,36 +1,75 @@
 import { Hono } from "hono";
+import { z } from "zod";
+import { chatMessageSchema } from "@shared/src/ai/chat-message";
+import { ValidationError, NotFoundError, ForbiddenError } from "@/infrastructure/errors";
+import { schema, eq, and } from "@/infrastructure/db";
+
+const { documents } = schema;
 
 export const chatRouter = new Hono();
 
-/**
- * Build system prompt for AI chat that enforces citation accuracy
- * Kept for testing compatibility
- */
-export function buildSystemPrompt(): string {
-  return `You are an academic writing assistant helping students write research papers with proper citations.
+const chatRequestSchema = z.object({
+  documentId: z.string().uuid("Invalid document ID"),
+  messages: z.array(chatMessageSchema).min(1, "At least one message is required"),
+});
 
-CITATION RULES (CRITICAL):
-- Only cite claims present in sources provided to you
-- Use @citation-key format for all citations (e.g., @einstein1905)
-- Never hallucinate or invent sources that were not provided
-- Every factual claim must be supported by a citation
-- Prefer recent sources when multiple sources support the same claim
-- If you cannot find a source to support a claim, say so explicitly
-
-CITATION FORMAT:
-- Use @citation-key immediately after the claim (e.g., "The theory of relativity @einstein1905 revolutionized physics")
-- Multiple citations: @key1 @key2 @key3
-- Do not use numbered citations like [1] or (1)
-
-WRITING GUIDELINES:
-- Write in clear, academic prose
-- Help students develop their arguments
-- Suggest improvements to structure and clarity
-- Maintain academic integrity at all times
-
-Remember: Citation accuracy is paramount. Never cite a source that was not provided to you.`;
-}
-
+// POST /chat - Stream chat response
 chatRouter.post("/", async (c) => {
-  
+  const auth = c.get("auth");
+  const userId = auth.userId;
+  const services = c.get("services");
+  const agentService = services.agentService;
+  const db = services.db;
+
+  const body = await c.req.json();
+  const parsed = chatRequestSchema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ValidationError("Invalid request", parsed.error.message);
+  }
+
+  const { documentId, messages } = parsed.data;
+
+  // Verify document ownership
+  const document = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.userId, userId)))
+    .limit(1);
+
+  if (!document[0]) {
+    throw new NotFoundError("Document not found");
+  }
+
+  // Stream chat response with automatic credit handling and persistence
+  return await agentService.streamChatResponse(userId, documentId, messages);
+});
+
+// GET /chat/:documentId - Get chat history for a document
+chatRouter.get("/:documentId", async (c) => {
+  const auth = c.get("auth");
+  const userId = auth.userId;
+  const services = c.get("services");
+  const db = services.db;
+  const documentId = c.req.param("documentId");
+
+  // Verify document ownership
+  const document = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.userId, userId)))
+    .limit(1);
+
+  if (!document[0]) {
+    throw new NotFoundError("Document not found");
+  }
+
+  // Get chat history
+  const messages = await db
+    .select()
+    .from(schema.chatMessages)
+    .where(eq(schema.chatMessages.documentId, documentId))
+    .orderBy(schema.chatMessages.createdAt);
+
+  return c.json(messages);
 });

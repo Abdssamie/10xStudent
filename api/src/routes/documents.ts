@@ -8,6 +8,7 @@ import {
   createDocumentSchema,
   documentResponseSchema,
   updateDocumentBodySchema,
+  documentContentResponseSchema,
 } from "@shared/src";
 
 const { documents } = schema;
@@ -193,4 +194,42 @@ documentsRouter.openapi(deleteDocumentRoute, async (c) => {
     .where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
 
   return c.body(null, 204);
+});
+
+const getDocumentContentRoute = createRoute({
+  method: "get",
+  path: "/{id}/content",
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: documentContentResponseSchema,
+        },
+      },
+      description: "Document Typst content retrieved successfully",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(getDocumentContentRoute, async (c) => {
+  const auth = c.get("auth");
+  const userId = auth.userId;
+  const { id: documentId } = c.req.valid("param");
+  const services = c.get("services");
+  const db = services.db;
+  const storageService = services.storageService;
+
+  await requireDocumentOwnership(documentId, userId, db);
+
+  const content = await storageService.getDocument(userId, documentId);
+
+  logger.info({ userId, documentId }, "Document content retrieved");
+
+  return c.json({ content });
 });

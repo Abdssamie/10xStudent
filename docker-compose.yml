@@ -34,7 +34,7 @@ services:
     image: redis:7-alpine
     container_name: 10xstudent-redis
     ports:
-      - "${REDIS_PORT:-6380}:6379"
+      - "${REDIS_PORT:-6381}:6381"
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data

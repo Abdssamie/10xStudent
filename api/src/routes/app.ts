@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { constructApiRoute } from "@/utils/router";
 import { env } from "@/config/env";
+import { assetsRouter } from "./assets";
 import { chatRouter } from "./chat";
 import { citationsRouter } from "./citations";
 import { creditsRouter } from "./credits";
@@ -26,6 +27,9 @@ appRouter.route(
 );
 appRouter.route(
   constructApiRoute("/documents"), documentsRouter
+);
+appRouter.route(
+  constructApiRoute("/assets"), assetsRouter
 );
 appRouter.route(
   constructApiRoute("/sources"), sourcesRouter

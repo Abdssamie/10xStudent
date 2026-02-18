@@ -1,5 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import type { OpenAPIHono } from '@hono/zod-openapi';
+
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 import { UnauthorizedError } from '@/infrastructure/errors';

@@ -215,12 +215,13 @@ describe("Rate Limiting Middleware", () => {
   });
 
   it("should fail open when Redis errors occur", async () => {
-    // Create a Redis mock that throws errors
-    const errorRedis = {
-      pipeline: () => {
-        throw new Error("Redis connection failed");
-      },
-    } as unknown as Redis;
+    // Create a Redis client with invalid connection to simulate errors
+    const errorRedis = new Redis({
+      host: "invalid-host-that-does-not-exist",
+      port: 9999,
+      retryStrategy: () => null, // Don't retry
+      lazyConnect: true, // Don't connect immediately
+    });
 
     const rateLimiter = createRateLimitMiddleware(errorRedis, {
       windowMs: 60000,
@@ -240,5 +241,8 @@ describe("Rate Limiting Middleware", () => {
     // Should allow request even though Redis failed
     const res = await app.request("/test");
     expect(res.status).toBe(200);
+    
+    // Cleanup
+    errorRedis.disconnect();
   });
 });

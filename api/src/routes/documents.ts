@@ -320,7 +320,7 @@ documentsRouter.openapi(getDocumentBibliographyRoute, async (c) => {
     logger.debug({ userId, documentId }, "Bibliography retrieved from cache");
     return c.json({ bibliography: cachedBibliography });
   } catch (error) {
-    logger.debug({ userId, documentId }, "Bibliography cache miss, generating fresh");
+    logger.debug({ error, userId, documentId }, "Bibliography cache miss, generating fresh");
   }
 
   // Cache miss - generate fresh bibliography

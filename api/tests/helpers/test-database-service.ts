@@ -75,21 +75,30 @@ export class TestDatabaseService {
    * Seed a test user with credits
    */
   async seedTestUser(
-    userId: string,
+    clerkId: string,
     credits: number = 1000
   ): Promise<schema.User> {
     const [user] = await this.db
       .insert(schema.users)
       .values({
-        id: userId,
+        clerkId,
         credits,
-        creditsResetAt: new Date(),
       })
       .returning();
 
     if (!user) {
       throw new Error("Failed to create test user");
     }
+
+    return user;
+  }
+
+  async getUserByClerkId(clerkId: string): Promise<schema.User | undefined> {
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(sql`${schema.users.clerkId} = ${clerkId}`)
+      .limit(1);
 
     return user;
   }

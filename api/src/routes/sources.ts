@@ -53,8 +53,8 @@ const createSourceRoute = createRoute({
 });
 
 sourcesRouter.openapi(createSourceRoute, async (c) => {
-    const auth = c.get("auth");
-    const userId = auth.userId;
+    const user = c.get("user");
+    const userId = user.id;
     const { documentId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;
@@ -130,8 +130,8 @@ const listSourcesRoute = createRoute({
 });
 
 sourcesRouter.openapi(listSourcesRoute, async (c) => {
-    const auth = c.get("auth");
-    const userId = auth.userId;
+    const user = c.get("user");
+    const userId = user.id;
     const { documentId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;
@@ -184,8 +184,8 @@ const updateSourceRoute = createRoute({
 });
 
 sourcesRouter.openapi(updateSourceRoute, async (c) => {
-    const auth = c.get("auth");
-    const userId = auth.userId;
+    const user = c.get("user");
+    const userId = user.id;
     const { sourceId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;
@@ -231,8 +231,8 @@ const deleteSourceRoute = createRoute({
 });
 
 sourcesRouter.openapi(deleteSourceRoute, async (c) => {
-    const auth = c.get("auth");
-    const userId = auth.userId;
+    const user = c.get("user");
+    const userId = user.id;
     const { sourceId } = c.req.valid("param");
     const services = c.get("services");
     const db = services.db;

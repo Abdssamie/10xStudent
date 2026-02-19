@@ -44,8 +44,8 @@ const createDocumentRoute = createRoute({
 });
 
 documentsRouter.openapi(createDocumentRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const services = c.get("services");
   const db = services.db;
   const storageService = services.storageService;
@@ -93,8 +93,8 @@ const listDocumentsRoute = createRoute({
 });
 
 documentsRouter.openapi(listDocumentsRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const services = c.get("services");
   const db = services.db;
 
@@ -135,8 +135,8 @@ const updateDocumentRoute = createRoute({
 });
 
 documentsRouter.openapi(updateDocumentRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { id: documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -177,8 +177,8 @@ const deleteDocumentRoute = createRoute({
 });
 
 documentsRouter.openapi(deleteDocumentRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { id: documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -221,8 +221,8 @@ const getDocumentContentRoute = createRoute({
 });
 
 documentsRouter.openapi(getDocumentContentRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { id: documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -266,8 +266,8 @@ const updateDocumentContentRoute = createRoute({
 });
 
 documentsRouter.openapi(updateDocumentContentRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { id: documentId } = c.req.valid("param");
   const { content } = c.req.valid("json");
   const services = c.get("services");
@@ -305,8 +305,8 @@ const getDocumentBibliographyRoute = createRoute({
 });
 
 documentsRouter.openapi(getDocumentBibliographyRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { id: documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;

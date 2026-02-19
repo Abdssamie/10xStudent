@@ -2,19 +2,23 @@ import { Hono } from "hono";
 import { errorHandler } from "@/middleware/error-handler";
 import type { ServiceContainer } from "@/services/container";
 
-/**
- * Create a test Hono app with mocked auth middleware
- * Used for route integration testing
- */
-export function createTestApp(serviceContainer: ServiceContainer, userId: string): Hono {
+export interface TestUserContext {
+  clerkId: string;
+  id: string;
+}
+
+export function createTestApp(serviceContainer: ServiceContainer, userContext: TestUserContext): Hono {
   const app = new Hono();
 
-  // Mock auth middleware - inject test user context
   app.use("*", async (c, next) => {
     c.set("auth", {
-      userId,
+      userId: userContext.clerkId,
       sessionId: "test-session-id",
       orgId: undefined,
+    });
+    c.set("user", {
+      id: userContext.id,
+      clerkId: userContext.clerkId,
     });
     c.set("services", serviceContainer);
     await next();
@@ -23,16 +27,13 @@ export function createTestApp(serviceContainer: ServiceContainer, userId: string
   return app;
 }
 
-/**
- * Create a test app with a specific router mounted
- */
 export function createTestAppWithRouter(
   serviceContainer: ServiceContainer,
-  userId: string,
+  userContext: TestUserContext,
   router: Hono,
   basePath: string
 ): Hono {
-  const app = createTestApp(serviceContainer, userId);
+  const app = createTestApp(serviceContainer, userContext);
   app.route(basePath, router);
   app.onError(errorHandler);
   return app;

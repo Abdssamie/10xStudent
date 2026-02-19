@@ -30,7 +30,6 @@ export const documents = pgTable(
       .defaultNow(),
   },
   (table) => [
-    // Indexes for performance
     index("documents_user_id_idx").on(table.userId),
     index("documents_created_at_idx").on(table.createdAt.desc()),
     index("documents_updated_at_idx").on(table.updatedAt.desc()),

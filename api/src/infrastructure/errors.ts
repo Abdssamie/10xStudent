@@ -101,3 +101,13 @@ export class TooManyRequestsError extends AppError {
     Object.setPrototypeOf(this, TooManyRequestsError.prototype);
   }
 }
+
+/**
+ * 500 Internal Server Error - Unexpected server error
+ */
+export class InternalServerError extends AppError {
+  constructor(message = "Internal server error", details?: unknown) {
+    super(message, 500, "INTERNAL_ERROR", details);
+    Object.setPrototypeOf(this, InternalServerError.prototype);
+  }
+}

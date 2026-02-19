@@ -45,8 +45,8 @@ const createCitationRoute = createRoute({
 });
 
 citationsRouter.openapi(createCitationRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -138,8 +138,8 @@ const listCitationsRoute = createRoute({
 });
 
 citationsRouter.openapi(listCitationsRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -188,8 +188,8 @@ const deleteCitationRoute = createRoute({
 });
 
 citationsRouter.openapi(deleteCitationRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { citationId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;

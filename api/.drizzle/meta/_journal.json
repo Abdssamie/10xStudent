@@ -15,6 +15,13 @@
       "when": 1770870230818,
       "tag": "0001_tired_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771530475832,
+      "tag": "0002_lucky_flatman",
+      "breakpoints": true
     }
   ]
 }

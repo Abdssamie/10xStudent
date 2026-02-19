@@ -24,7 +24,6 @@ export const creditLogs = pgTable(
       .defaultNow(),
   },
   (table) => [
-    // Indexes for audit queries
     index("credit_logs_user_id_idx").on(table.userId),
     index("credit_logs_timestamp_idx").on(table.timestamp.desc()),
   ],

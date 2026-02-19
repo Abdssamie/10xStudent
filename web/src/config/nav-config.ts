@@ -1,4 +1,5 @@
 import {
+  CreditCard,
   FileText,
   FolderOpen,
   Home,
@@ -52,5 +53,10 @@ export const navItems: NavItem[] = [
     title: 'Settings',
     url: '/settings',
     icon: Settings,
+  },
+  {
+    title: 'Billing',
+    url: '/settings/billing',
+    icon: CreditCard,
   },
 ];

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -89,13 +90,17 @@ export function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck className="mr-2 h-4 w-4" />
-                Account
+              <DropdownMenuItem asChild>
+                <Link href="/settings?tab=profile">
+                  <BadgeCheck className="mr-2 h-4 w-4" />
+                  Account
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard className="mr-2 h-4 w-4" />
-                Billing
+              <DropdownMenuItem asChild>
+                <Link href="/settings?tab=billing">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Billing
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

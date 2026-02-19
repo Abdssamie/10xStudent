@@ -19,3 +19,4 @@ export * from "./api/citations";
 export * from "./api/assets";
 export * from "./api/credits";
 export * from "./api/chat";
+export * from "./api/user";

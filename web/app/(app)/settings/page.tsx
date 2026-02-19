@@ -1,14 +1,16 @@
+'use client';
+
+import { ProfileSection } from '@/components/settings/profile-section';
+import { PreferencesSection } from '@/components/settings/preferences-section';
+
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account and preferences.
-        </p>
-      </div>
-      <div className="rounded-lg border border-dashed p-8 text-center">
-        <p className="text-muted-foreground">Settings will be available here.</p>
+      <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <ProfileSection />
+        <PreferencesSection />
       </div>
     </div>
   );

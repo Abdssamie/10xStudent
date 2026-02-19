@@ -66,8 +66,8 @@ const uploadAssetRoute = createRoute({
 });
 
 assetsRouter.openapi(uploadAssetRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -151,8 +151,8 @@ const listAssetsRoute = createRoute({
 });
 
 assetsRouter.openapi(listAssetsRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { documentId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -196,8 +196,8 @@ const getAssetRoute = createRoute({
 });
 
 assetsRouter.openapi(getAssetRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { documentId, assetId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;
@@ -249,8 +249,8 @@ const deleteAssetRoute = createRoute({
 });
 
 assetsRouter.openapi(deleteAssetRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const { documentId, assetId } = c.req.valid("param");
   const services = c.get("services");
   const db = services.db;

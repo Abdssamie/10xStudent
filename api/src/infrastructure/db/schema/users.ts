@@ -1,6 +1,7 @@
 import {
   pgTable,
   uuid,
+  text,
   integer,
   jsonb,
   timestamp,
@@ -17,7 +18,8 @@ export type UserPreferences = {
 export const users = pgTable(
   "users",
   {
-    id: uuid("id").primaryKey(), // Clerk userId
+    id: uuid("id").primaryKey().defaultRandom(),
+    clerkId: text("clerk_id").notNull().unique(), // Clerk userId (e.g., user_39toVf97YjjeeCwdZthKcF3Pzdf)
     credits: integer("credits").notNull().default(10000),
     preferences: jsonb("preferences").$type<UserPreferences>(),
     creditsResetAt: timestamp("credits_reset_at", { withTimezone: true })
@@ -31,7 +33,7 @@ export const users = pgTable(
       .defaultNow(),
   },
   (table) => [
-    // Index for credit queries
+    index("users_clerk_id_idx").on(table.clerkId),
     index("users_credits_idx").on(table.credits),
   ],
 );

@@ -35,12 +35,12 @@ const getCreditsBalanceRoute = createRoute({
 });
 
 creditsRouter.openapi(getCreditsBalanceRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const userContext = c.get("user");
+  const userId = userContext.id;
   const services = c.get("services");
   const db = services.db;
 
-  const [user] = await db
+  const [userRecord] = await db
     .select({
       balance: users.credits,
       creditsResetAt: users.creditsResetAt,
@@ -48,23 +48,22 @@ creditsRouter.openapi(getCreditsBalanceRoute, async (c) => {
     .from(users)
     .where(eq(users.id, userId));
 
-  if (!user) {
+  if (!userRecord) {
     throw new NotFoundError("User not found");
   }
 
-  // Calculate usage this month (since last reset)
   const [usage] = await db
     .select({
       total: sql<number>`COALESCE(SUM(${creditLogs.cost}), 0)`,
     })
     .from(creditLogs)
     .where(
-      sql`${creditLogs.userId} = ${userId} AND ${creditLogs.timestamp} >= ${user.creditsResetAt}`,
+      sql`${creditLogs.userId} = ${userId} AND ${creditLogs.timestamp} >= ${userRecord.creditsResetAt}`,
     );
 
   return c.json({
-    balance: user.balance,
-    creditsResetAt: user.creditsResetAt,
+    balance: userRecord.balance,
+    creditsResetAt: userRecord.creditsResetAt,
     usedThisMonth: usage?.total ?? 0,
   });
 });
@@ -92,8 +91,8 @@ const getCreditsHistoryRoute = createRoute({
 });
 
 creditsRouter.openapi(getCreditsHistoryRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const userContext = c.get("user");
+  const userId = userContext.id;
   const services = c.get("services");
   const db = services.db;
 

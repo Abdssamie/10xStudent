@@ -1,36 +1,21 @@
 import { Hono } from "hono";
-import { Webhook } from "svix";
 import { schema, eq } from "@/infrastructure/db";
-import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
 import { verifyWebhook } from "@clerk/backend/webhooks";
 
 const { users } = schema;
 
+const DEFAULT_USER_VALUES = {
+  credits: 10000,
+  preferences: {
+    defaultCitationFormat: "APA",
+    defaultResearchDepth: "quick",
+  },
+} as const;
+
 export const webhooksRouter = new Hono();
 
 webhooksRouter.post("/clerk", async (c) => {
-  // Get webhook signature headers
-  const svixId = c.req.header("svix-id");
-  const svixTimestamp = c.req.header("svix-timestamp");
-  const svixSignature = c.req.header("svix-signature");
-
-  if (!svixId || !svixTimestamp || !svixSignature) {
-    return c.json({ error: "Missing webhook signature headers" }, 400);
-  }
-
-  // Get raw body
-  const body = await c.req.text();
-
-  // Verify webhook signature using CLERK_WEBHOOK_SIGNING_SECRET
-  const webhookSecret = env.CLERK_WEBHOOK_SIGNING_SECRET;
-  if (!webhookSecret) {
-    logger.error("CLERK_WEBHOOK_SIGNING_SECRET not configured");
-    return c.json({ error: "Webhook secret not configured" }, 500);
-  }
-
-  const wh = new Webhook(webhookSecret);
-
   let event;
   try {
     event = await verifyWebhook(c.req.raw);
@@ -42,52 +27,59 @@ webhooksRouter.post("/clerk", async (c) => {
   const services = c.get("services");
   const db = services.db;
 
-  // Handle user.created and user.updated with upsert
-  if (event.type === "user.created" || event.type === "user.updated") {
-    const userId = event.data.id;
+  if (event.type === "user.created") {
+    const clerkId = event.data.id;
 
-    // Use upsert pattern: try insert, on conflict update
     try {
-      await db
-        .insert(users)
-        .values({
-          id: userId,
-          credits: 10000,
-          preferences: {
-            defaultCitationFormat: "APA",
-            defaultResearchDepth: "quick",
-          },
-          creditsResetAt: new Date(),
-        })
-        .onConflictDoNothing(); // On user.updated, keep existing data
+      await db.insert(users).values({
+        clerkId,
+        ...DEFAULT_USER_VALUES,
+      }).onConflictDoNothing({ target: users.clerkId });
     } catch (err) {
-      logger.error({ error: err, userId, eventType: event.type }, "Failed to sync user");
-      // Return 500 to trigger Svix retry
+      logger.error({ error: err, clerkId, eventType: event.type }, "Failed to create user");
+      return c.json({ error: "Failed to create user" }, 500);
+    }
+
+    return c.json({ success: true });
+  }
+
+  if (event.type === "user.updated") {
+    const clerkId = event.data.id;
+
+    try {
+      await db.insert(users).values({
+        clerkId,
+        ...DEFAULT_USER_VALUES,
+      }).onConflictDoUpdate({
+        target: users.clerkId,
+        set: { updatedAt: new Date() },
+      });
+    } catch (err) {
+      logger.error({ error: err, clerkId, eventType: event.type }, "Failed to sync user");
       return c.json({ error: "Failed to sync user" }, 500);
     }
 
     return c.json({ success: true });
   }
 
-  // Handle user.deleted
   if (event.type === "user.deleted") {
-    const userId = event.data.id;
+    const clerkId = event.data.id;
 
-    if (!userId) {
+    if (!clerkId) {
       logger.error("User ID missing in user.deleted event");
       return c.json({ error: "User ID missing" }, 400);
     }
 
     try {
-      await db.delete(users).where(eq(users.id, userId));
+      await db.delete(users).where(eq(users.clerkId, clerkId));
     } catch (err) {
-      logger.error({ error: err, userId }, "Failed to delete user");
+      logger.error({ error: err, clerkId }, "Failed to delete user");
       return c.json({ error: "Failed to delete user" }, 500);
     }
 
     return c.json({ success: true });
   }
 
-  // Return 200 for unhandled events (don't trigger retries)
-  return c.json({ success: true });
+  logger.info({ eventType: event.type }, "Unhandled webhook event");
+  return c.json({ success: true, handled: false });
 });

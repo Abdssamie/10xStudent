@@ -35,8 +35,8 @@ const streamChatRoute = createRoute({
 });
 
 chatRouter.openapi(streamChatRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const services = c.get("services");
   const agentService = services.agentService;
   const db = services.db;
@@ -80,8 +80,8 @@ const getChatHistoryRoute = createRoute({
 });
 
 chatRouter.openapi(getChatHistoryRoute, async (c) => {
-  const auth = c.get("auth");
-  const userId = auth.userId;
+  const user = c.get("user");
+  const userId = user.id;
   const services = c.get("services");
   const db = services.db;
   const { documentId } = c.req.valid("param");

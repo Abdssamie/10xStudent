@@ -41,12 +41,8 @@ export function createRateLimitMiddleware(
   } = options;
 
   return createMiddleware(async (c: Context, next) => {
-    // Get user ID from auth context
     const userId = c.get("auth")?.userId;
 
-    // Skip rate limiting for unauthenticated requests if configured
-    // Todo: Consider using IP-based rate limiting for unauthenticated requests instead of skipping
-    // This might be fine though, as it doesn't mean we allow abuse of our authenticated services
     if (!userId) {
       logger.warn(
         {
@@ -59,35 +55,24 @@ export function createRateLimitMiddleware(
       return;
     }
 
-    // Generate rate limit key (userId is guaranteed to exist here)
     const key = `${keyPrefix}:${userId}`;
     const now = Date.now();
     const windowStart = now - windowMs;
 
     try {
-      // Use Redis pipeline for atomic operations
       const pipeline = redis.pipeline();
 
-      // Remove old entries outside the window
       pipeline.zremrangebyscore(key, 0, windowStart);
-
-      // Count current requests in window
       pipeline.zcard(key);
-
-      // Add current request timestamp
       pipeline.zadd(key, now, `${now}-${Math.random()}`);
-
-      // Set expiry on the key (cleanup)
       pipeline.expire(key, Math.ceil(windowMs / 1000) + 1);
 
-      // Execute pipeline
       const results = await pipeline.exec();
 
       if (!results) {
         throw new Error("Redis pipeline returned null");
       }
 
-      // Get count before adding current request (index 1 in results)
       const countResult = results[1];
       if (!countResult || countResult[0]) {
         throw new Error("Failed to get request count from Redis");
@@ -97,12 +82,10 @@ export function createRateLimitMiddleware(
       const remaining = Math.max(0, maxRequests - currentCount - 1);
       const resetAt = now + windowMs;
 
-      // Set rate limit headers
       c.header("X-RateLimit-Limit", maxRequests.toString());
       c.header("X-RateLimit-Remaining", remaining.toString());
       c.header("X-RateLimit-Reset", new Date(resetAt).toISOString());
 
-      // Check if limit exceeded
       if (currentCount >= maxRequests) {
         const retryAfter = Math.ceil(windowMs / 1000);
 
@@ -128,12 +111,10 @@ export function createRateLimitMiddleware(
 
       await next();
     } catch (err) {
-      // If it's our TooManyRequestsError, re-throw it
       if (err instanceof TooManyRequestsError) {
         throw err;
       }
 
-      // Fail open: if Redis is unavailable, log error but allow request
       logger.error(
         {
           err,

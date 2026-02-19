@@ -3,21 +3,28 @@ import {
   uuid,
   text,
   timestamp,
+  index,
 } from "drizzle-orm/pg-core";
+import { users } from "./users";
 
-// Assets table for document images/files stored in R2
+// API Keys table
 export const apiKeys = pgTable(
-  "assets",
+  "api_keys",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").notNull(),
-    keyHash: text("key_hash").notNull(), // S3/R2 path to asset (images, files, etc.)
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    keyHash: text("key_hash").notNull(),
     name: text("name").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-  }
+  },
+  (table) => [
+    index("api_keys_user_id_idx").on(table.userId),
+  ]
 );
 
 // Type inference

@@ -1,6 +1,5 @@
 import { createMiddleware } from 'hono/factory';
 import { clerkClient } from '@clerk/clerk-sdk-node';
-import type { OpenAPIHono } from '@hono/zod-openapi';
 
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
@@ -18,10 +17,6 @@ declare module 'hono' {
     }
 }
 
-/**
- * Modern Clerk authentication middleware for Hono
- * Verifies JWT tokens from Clerk and extracts user context
- */
 export const authMiddleware = createMiddleware(async (c, next) => {
     const authHeader = c.req.header('Authorization');
 
@@ -31,19 +26,17 @@ export const authMiddleware = createMiddleware(async (c, next) => {
         );
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const token = authHeader.substring(7);
 
     if (!token) {
         throw new UnauthorizedError('Token is empty');
     }
 
     try {
-        // Verify the session token with Clerk
         const verified = await clerkClient.verifyToken(token, {
             secretKey: env.CLERK_SECRET_KEY,
         });
 
-        // Extract user context from verified token
         c.set('auth', {
             userId: verified.sub,
             sessionId: verified.sid,

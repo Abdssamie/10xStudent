@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useDocument, useDocumentContent, useUpdateDocumentContent } from '@/hooks/use-document';
-import { useUpdateDocument } from '@/hooks/use-documents';
 import { Editor } from '@/components/documents/editor';
 import Link from 'next/link';
 
@@ -54,7 +53,7 @@ export default function DocumentEditorPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-10rem)]">
+    <div className="h-[calc(100vh-6rem)] w-full overflow-hidden">
       <Editor
         title={document.title}
         documentId={document.id}

@@ -1,12 +1,6 @@
 const CACHE_NAME = 'typst-wasm-v1';
 const WASM_VERSION = '0.7.0-rc2';
 
-interface CacheEntry {
-  version: string;
-  data: ArrayBuffer;
-  timestamp: number;
-}
-
 async function getCachedWasm(
   type: 'compiler' | 'renderer',
   version: string,

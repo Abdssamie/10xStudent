@@ -6,6 +6,7 @@ import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import { typst } from 'codemirror-lang-typst';
 import { $typst } from '@myriaddreamin/typst.ts';
 import { useDebouncedCallback } from 'use-debounce';
+import { EditorView } from '@codemirror/view';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTypst } from '@/hooks/use-typst';
@@ -109,7 +110,7 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
                 value={content}
                 height="100%"
                 theme={vscodeDark}
-                extensions={[typst()]}
+                extensions={[typst(), EditorView.lineWrapping]}
                 onChange={handleChange}
                 className="h-full text-sm w-full [&_.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"
                 basicSetup={{

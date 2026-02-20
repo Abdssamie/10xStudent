@@ -11,6 +11,7 @@ export const documentResponseSchema = z.object({
   citationCount: z.number(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  lastAccessedAt: z.string().datetime(),
 });
 
 export const updateDocumentBodySchema = z.object({

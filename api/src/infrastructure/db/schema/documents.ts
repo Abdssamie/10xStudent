@@ -8,7 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
-// Documents table schema
 export const documents = pgTable(
   "documents",
   {
@@ -17,10 +16,10 @@ export const documents = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
-    typstKey: text("typst_key").notNull(), // S3/R2 path to main.typ
-    bibKey: text("bib_key"), // S3/R2 path to refs.bib (optional)
-    template: text("template").notNull(), // 'research-paper' | 'report' | 'essay' | 'article' | 'notes'
-    citationFormat: text("citation_format").notNull().default("APA"), // 'APA' | 'MLA' | 'Chicago'
+    typstKey: text("typst_key").notNull(),
+    bibKey: text("bib_key"),
+    template: text("template").notNull(),
+    citationFormat: text("citation_format").notNull().default("APA"),
     citationCount: integer("citation_count").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -28,14 +27,17 @@ export const documents = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index("documents_user_id_idx").on(table.userId),
     index("documents_created_at_idx").on(table.createdAt.desc()),
     index("documents_updated_at_idx").on(table.updatedAt.desc()),
+    index("documents_last_accessed_at_idx").on(table.lastAccessedAt.desc()),
   ],
 );
 
-// Type inference
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;

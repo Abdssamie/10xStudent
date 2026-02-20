@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { schema, eq, and } from "@/infrastructure/db";
+import { schema, eq, and, sql, desc } from "@/infrastructure/db";
 import { authMiddleware } from "@/middleware/auth";
 import { logger } from "@/utils/logger";
 import { NotFoundError } from "@/infrastructure/errors";
@@ -101,9 +101,52 @@ documentsRouter.openapi(listDocumentsRoute, async (c) => {
   const userDocuments = await db
     .select()
     .from(documents)
-    .where(eq(documents.userId, userId));
+    .where(eq(documents.userId, userId))
+    .orderBy(desc(documents.lastAccessedAt));
 
   return c.json(userDocuments);
+});
+
+const getDocumentRoute = createRoute({
+  method: "get",
+  path: "/{id}",
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: documentResponseSchema,
+        },
+      },
+      description: "Document retrieved successfully",
+    },
+  },
+  tags: ["Documents"],
+});
+
+documentsRouter.openapi(getDocumentRoute, async (c) => {
+  const user = c.get("user");
+  const userId = user.id;
+  const { id: documentId } = c.req.valid("param");
+  const services = c.get("services");
+  const db = services.db;
+
+  await requireDocumentOwnership(documentId, userId, db);
+
+  const [document] = await db
+    .select()
+    .from(documents)
+    .where(eq(documents.id, documentId));
+
+  if (!document) {
+    throw new NotFoundError("Document not found");
+  }
+
+  return c.json(document);
 });
 
 const updateDocumentRoute = createRoute({
@@ -230,6 +273,11 @@ documentsRouter.openapi(getDocumentContentRoute, async (c) => {
 
   await requireDocumentOwnership(documentId, userId, db);
 
+  await db
+    .update(documents)
+    .set({ lastAccessedAt: sql`now()` })
+    .where(eq(documents.id, documentId));
+
   const content = await storageService.getDocument(userId, documentId);
 
   logger.info({ userId, documentId }, "Document content retrieved");
@@ -277,6 +325,11 @@ documentsRouter.openapi(updateDocumentContentRoute, async (c) => {
   await requireDocumentOwnership(documentId, userId, db);
 
   await storageService.uploadDocument(userId, documentId, content);
+
+  await db
+    .update(documents)
+    .set({ updatedAt: sql`now()`, lastAccessedAt: sql`now()` })
+    .where(eq(documents.id, documentId));
 
   logger.info({ userId, documentId, contentLength: content.length }, "Document content updated");
 

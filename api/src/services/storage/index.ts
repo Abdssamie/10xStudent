@@ -5,3 +5,4 @@
 export type { StorageService } from "./interface";
 export { R2StorageService } from "./r2-storage-service";
 export { createStorageService } from "./factory";
+export { readAsString, readAsBuffer } from "./stream-utils";

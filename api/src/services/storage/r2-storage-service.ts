@@ -15,13 +15,11 @@ import {
   buildBibKey,
   buildAssetKey,
 } from "@/services/storage/utils";
+import { readAsString, readAsBuffer } from "./stream-utils";
 import { logger } from "@/utils/logger";
 import { AppError, NotFoundError } from "@/infrastructure/errors";
 import type { StorageService } from "./interface";
 
-/**
- * Convert S3 error to AppError
- */
 function handleS3Error(error: unknown, operation: string, key: string): never {
   if (error instanceof NoSuchKey) {
     throw new NotFoundError(`Storage object not found: ${key}`);
@@ -38,17 +36,12 @@ function handleS3Error(error: unknown, operation: string, key: string): never {
     );
   }
 
-  throw new AppError(
-    "Storage operation failed",
-    500,
-    "STORAGE_ERROR",
-    { operation, key }
-  );
+  throw new AppError("Storage operation failed", 500, "STORAGE_ERROR", {
+    operation,
+    key,
+  });
 }
 
-/**
- * Retry logic with exponential backoff
- */
 async function withRetry<T>(
   operation: () => Promise<T>,
   operationName: string,
@@ -62,17 +55,14 @@ async function withRetry<T>(
     } catch (error) {
       lastError = error;
 
-      // Don't retry on NotFoundError or validation errors
       if (error instanceof NotFoundError || error instanceof AppError) {
         throw error;
       }
 
-      // Don't retry on last attempt
       if (attempt === maxRetries) {
         break;
       }
 
-      // Exponential backoff: 100ms, 200ms, 400ms
       const delay = 100 * Math.pow(2, attempt);
       logger.warn(
         { attempt: attempt + 1, maxRetries, delay, error },
@@ -85,43 +75,7 @@ async function withRetry<T>(
   throw lastError;
 }
 
-/**
- * Convert stream to string
- */
-async function streamToString(stream: ReadableStream): Promise<string> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let result = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    result += decoder.decode(value, { stream: true });
-  }
-
-  return result;
-}
-
-/**
- * Convert stream to buffer
- */
-async function streamToBuffer(stream: ReadableStream): Promise<Buffer> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-
-  return Buffer.concat(chunks);
-}
-
 export class R2StorageService implements StorageService {
-  /**
-   * Upload a document's main Typst file
-   */
   async uploadDocument(
     userId: string,
     documentId: string,
@@ -152,9 +106,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Get a document's main Typst file
-   */
   async getDocument(userId: string, documentId: string): Promise<string> {
     const key = buildR2Key(userId, documentId);
 
@@ -174,9 +125,7 @@ export class R2StorageService implements StorageService {
             throw new NotFoundError(`Document not found: ${key}`);
           }
 
-          const content = await streamToString(
-            response.Body as ReadableStream
-          );
+          const content = await readAsString(response.Body);
 
           logger.info({ userId, documentId, key }, "Document retrieved from R2");
           return content;
@@ -188,9 +137,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Delete a document's main Typst file
-   */
   async deleteDocument(userId: string, documentId: string): Promise<void> {
     const key = buildR2Key(userId, documentId);
 
@@ -215,9 +161,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Upload a document's bibliography file
-   */
   async uploadBibliography(
     userId: string,
     documentId: string,
@@ -239,10 +182,7 @@ export class R2StorageService implements StorageService {
             })
           );
 
-          logger.info(
-            { userId, documentId, key },
-            "Bibliography uploaded to R2"
-          );
+          logger.info({ userId, documentId, key }, "Bibliography uploaded to R2");
         } catch (error) {
           handleS3Error(error, "uploadBibliography", key);
         }
@@ -251,9 +191,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Get a document's bibliography file
-   */
   async getBibliography(userId: string, documentId: string): Promise<string> {
     const key = buildBibKey(userId, documentId);
 
@@ -273,14 +210,9 @@ export class R2StorageService implements StorageService {
             throw new NotFoundError(`Bibliography not found: ${key}`);
           }
 
-          const content = await streamToString(
-            response.Body as ReadableStream
-          );
+          const content = await readAsString(response.Body);
 
-          logger.info(
-            { userId, documentId, key },
-            "Bibliography retrieved from R2"
-          );
+          logger.info({ userId, documentId, key }, "Bibliography retrieved from R2");
           return content;
         } catch (error) {
           handleS3Error(error, "getBibliography", key);
@@ -290,9 +222,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Delete a document's bibliography file
-   */
   async deleteBibliography(userId: string, documentId: string): Promise<void> {
     const key = buildBibKey(userId, documentId);
 
@@ -308,10 +237,7 @@ export class R2StorageService implements StorageService {
             })
           );
 
-          logger.info(
-            { userId, documentId, key },
-            "Bibliography deleted from R2"
-          );
+          logger.info({ userId, documentId, key }, "Bibliography deleted from R2");
         } catch (error) {
           handleS3Error(error, "deleteBibliography", key);
         }
@@ -320,9 +246,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Upload an asset file (image, etc.)
-   */
   async uploadAsset(
     userId: string,
     documentId: string,
@@ -349,10 +272,7 @@ export class R2StorageService implements StorageService {
             })
           );
 
-          logger.info(
-            { userId, documentId, filename, key },
-            "Asset uploaded to R2"
-          );
+          logger.info({ userId, documentId, filename, key }, "Asset uploaded to R2");
         } catch (error) {
           handleS3Error(error, "uploadAsset", key);
         }
@@ -361,9 +281,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Get an asset file
-   */
   async getAsset(
     userId: string,
     documentId: string,
@@ -387,14 +304,9 @@ export class R2StorageService implements StorageService {
             throw new NotFoundError(`Asset not found: ${key}`);
           }
 
-          const content = await streamToBuffer(
-            response.Body as ReadableStream
-          );
+          const content = await readAsBuffer(response.Body);
 
-          logger.info(
-            { userId, documentId, filename, key },
-            "Asset retrieved from R2"
-          );
+          logger.info({ userId, documentId, filename, key }, "Asset retrieved from R2");
           return content;
         } catch (error) {
           handleS3Error(error, "getAsset", key);
@@ -404,9 +316,6 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Delete an asset file
-   */
   async deleteAsset(
     userId: string,
     documentId: string,
@@ -429,10 +338,7 @@ export class R2StorageService implements StorageService {
             })
           );
 
-          logger.info(
-            { userId, documentId, filename, key },
-            "Asset deleted from R2"
-          );
+          logger.info({ userId, documentId, filename, key }, "Asset deleted from R2");
         } catch (error) {
           handleS3Error(error, "deleteAsset", key);
         }
@@ -441,13 +347,7 @@ export class R2StorageService implements StorageService {
     );
   }
 
-  /**
-   * Get public URL for a storage key
-   * Note: R2 public URLs require bucket to be configured with public access
-   */
   getPublicUrl(key: string): string {
-    // This would need to be configured based on your R2 public bucket setup
-    // For now, returning a placeholder that would need to be configured
     return `https://${R2_BUCKET_NAME}.r2.dev/${key}`;
   }
 }

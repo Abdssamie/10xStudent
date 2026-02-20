@@ -7,6 +7,8 @@ AI-powered research platform: Next.js 16 + Hono API + Bun + Drizzle ORM + Postgr
 **Structure:** `web/` (Next.js), `api/` (Hono), `shared/` (Zod schemas)
 **Path Aliases:** API: `@/*` → `./src/*`, `@shared` → `../shared` | Web: `@/*` → `./src/*`
 
+**Status:** This project is in active development. There are no existing clients. Do not add redirects or backwards compatibility for removed features - just delete them.
+
 ## Commands
 
 **Package Manager:** Always use `bun` (never npm/yarn/pnpm)

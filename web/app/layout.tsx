@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import ThemeProvider from "@/components/themes/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { ReactQueryProvider } from "@/components/providers/react-query-provider";
 import NextTopLoader from "nextjs-toploader";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -42,10 +43,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ClerkProvider>
-            <TooltipProvider>
-              <Toaster />
-              {children}
-            </TooltipProvider>
+            <ReactQueryProvider>
+              <TooltipProvider>
+                <Toaster />
+                {children}
+              </TooltipProvider>
+            </ReactQueryProvider>
           </ClerkProvider>
         </ThemeProvider>
       </body>

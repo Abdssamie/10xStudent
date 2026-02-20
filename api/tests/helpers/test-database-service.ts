@@ -115,6 +115,16 @@ export class TestDatabaseService {
     return user?.credits ?? 0;
   }
 
+  async getUserById(userId: string): Promise<schema.User | undefined> {
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(sql`${schema.users.id} = ${userId}`)
+      .limit(1);
+
+    return user;
+  }
+
   /**
    * Get all credit logs for a user
    */

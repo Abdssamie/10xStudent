@@ -7,19 +7,20 @@ import type { ServiceContainer } from "@/services/container";
 import { CreditManager } from "@/services/credit-manager";
 import { AgentService } from "@/services/agent";
 import * as schema from "@/infrastructure/db/schema";
+import type { User } from "@/infrastructure/db/schema";
 
 describe("GET /api/v1/documents/:id/bibliography", () => {
-  const userId = "660e8400-e29b-41d4-a716-446655440001";
   let testDb: TestDatabaseService;
   let serviceContainer: ServiceContainer;
   let mockStorage: MockStorageService;
+  let testUser: User;
+  const testClerkId = "660e8400-e29b-41d4-a716-446655440001";
 
   beforeEach(async () => {
     testDb = new TestDatabaseService(process.env.DATABASE_URL!);
     await testDb.cleanDatabase();
-    await testDb.seedTestUser(userId, 1000);
+    testUser = await testDb.seedTestUser(testClerkId, 1000);
     
-    // Create service container with mock storage
     mockStorage = new MockStorageService();
     const db = testDb.getDb();
     const creditManager = new CreditManager(db);
@@ -41,17 +42,15 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
     const documentId = crypto.randomUUID();
     const db = testDb.getDb();
     
-    // Create document
     await db.insert(schema.documents).values({
       id: documentId,
-      userId,
+      userId: testUser.id,
       title: "Test Doc",
-      template: "default",
-      typstKey: `documents/${userId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${testUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    // Create two sources
     await db.insert(schema.sources).values([
       {
         id: crypto.randomUUID(),
@@ -75,17 +74,16 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
       },
     ]);
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/bibliography`, {
       method: "GET",
     });
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as { bibliography: string };
     expect(data.bibliography).toBeDefined();
     expect(typeof data.bibliography).toBe("string");
     
-    // Verify both sources are in the bibliography
     expect(data.bibliography).toContain("smith2023");
     expect(data.bibliography).toContain("Machine Learning Advances");
     expect(data.bibliography).toContain("John Smith");
@@ -93,7 +91,6 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
     expect(data.bibliography).toContain("Deep Learning Fundamentals");
     expect(data.bibliography).toContain("Jane Doe");
     
-    // Verify BibTeX format markers
     expect(data.bibliography).toContain("@");
     expect(data.bibliography).toContain("{");
     expect(data.bibliography).toContain("}");
@@ -103,30 +100,29 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
     const documentId = crypto.randomUUID();
     const db = testDb.getDb();
     
-    // Create document without sources
     await db.insert(schema.documents).values({
       id: documentId,
-      userId,
+      userId: testUser.id,
       title: "Test Doc",
-      template: "default",
-      typstKey: `documents/${userId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${testUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/bibliography`, {
       method: "GET",
     });
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as { bibliography: string };
     expect(data.bibliography).toBe("");
   });
 
   it("should return 404 if document not found", async () => {
     const fakeId = crypto.randomUUID();
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${fakeId}/bibliography`, {
       method: "GET",
     });
@@ -136,20 +132,19 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
 
   it("should return 404 if user does not own document", async () => {
     const documentId = crypto.randomUUID();
-    const otherUserId = "660e8400-e29b-41d4-a716-446655440002";
+    const otherClerkId = "660e8400-e29b-41d4-a716-446655440002";
     const db = testDb.getDb();
     
-    await testDb.seedTestUser(otherUserId, 1000);
+    const otherUser = await testDb.seedTestUser(otherClerkId, 1000);
     await db.insert(schema.documents).values({
       id: documentId,
-      userId: otherUserId,
+      userId: otherUser.id,
       title: "Other User Doc",
-      template: "default",
-      typstKey: `documents/${otherUserId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${otherUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    // Add a source to the other user's document
     await db.insert(schema.sources).values({
       id: crypto.randomUUID(),
       documentId,
@@ -161,7 +156,7 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
       sourceType: "journal",
     });
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/bibliography`, {
       method: "GET",
     });
@@ -173,13 +168,12 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
     const documentId = crypto.randomUUID();
     const db = testDb.getDb();
     
-    // Create document with source
     await db.insert(schema.documents).values({
       id: documentId,
-      userId,
+      userId: testUser.id,
       title: "Test Doc",
-      template: "default",
-      typstKey: `documents/${userId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${testUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
@@ -194,23 +188,20 @@ describe("GET /api/v1/documents/:id/bibliography", () => {
       sourceType: "journal",
     });
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     
-    // First request - should generate and cache
     const response1 = await app.request(`/${documentId}/bibliography`, {
       method: "GET",
     });
     expect(response1.status).toBe(200);
-    const data1 = await response1.json();
+    const data1 = (await response1.json()) as { bibliography: string };
     
-    // Second request - should retrieve from cache
     const response2 = await app.request(`/${documentId}/bibliography`, {
       method: "GET",
     });
     expect(response2.status).toBe(200);
-    const data2 = await response2.json();
+    const data2 = (await response2.json()) as { bibliography: string };
     
-    // Both responses should be identical
     expect(data1.bibliography).toBe(data2.bibliography);
     expect(data2.bibliography).toContain("cached2023");
     expect(data2.bibliography).toContain("Cached Paper");

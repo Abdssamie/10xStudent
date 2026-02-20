@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -32,14 +31,9 @@ import { Button } from '@/components/ui/button';
 import { useCreateDocument } from '@/hooks/use-documents';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useRouter } from 'next/navigation';
+import { createDocumentFormSchema, type CreateDocumentFormInput } from '@shared/src/document';
 
-const createDocumentSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
-  template: z.enum(['research-paper', 'report', 'essay', 'article', 'notes']),
-  citationFormat: z.enum(['APA', 'MLA', 'Chicago']),
-});
-
-type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
+type CreateDocumentForm = CreateDocumentFormInput;
 
 interface CreateDocumentDialogProps {
   children: React.ReactNode;
@@ -54,10 +48,11 @@ export function CreateDocumentDialog({ children }: CreateDocumentDialogProps) {
   const defaultCitationFormat = settings?.preferences?.defaultCitationFormat || 'APA';
 
   const form = useForm<CreateDocumentForm>({
-    resolver: zodResolver(createDocumentSchema),
+    resolver: zodResolver(createDocumentFormSchema),
     defaultValues: {
       title: '',
       template: 'research-paper',
+      docType: 'a4',
       citationFormat: defaultCitationFormat,
     },
   });
@@ -121,6 +116,28 @@ export function CreateDocumentDialog({ children }: CreateDocumentDialogProps) {
                       <SelectItem value="essay">Essay</SelectItem>
                       <SelectItem value="article">Article</SelectItem>
                       <SelectItem value="notes">Notes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="docType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Page Size</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a page size" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="a4">A4</SelectItem>
+                      <SelectItem value="us-letter">US Letter</SelectItem>
+                      <SelectItem value="auto">Dynamic</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

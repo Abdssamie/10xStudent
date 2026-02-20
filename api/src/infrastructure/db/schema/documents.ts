@@ -19,6 +19,7 @@ export const documents = pgTable(
     typstKey: text("typst_key").notNull(),
     bibKey: text("bib_key"),
     template: text("template").notNull(),
+    docType: text("doc_type").notNull().default("a4"),
     citationFormat: text("citation_format").notNull().default("APA"),
     citationCount: integer("citation_count").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })

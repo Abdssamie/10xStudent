@@ -3,28 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { toast } from 'sonner';
+import type { DocumentResponse as Document, DocumentContentResponse as DocumentContent } from '@shared/src/api/documents';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 if (!API_URL) {
   throw new Error('NEXT_PUBLIC_API_URL is not set. Please configure it in your environment variables.');
-}
-
-interface Document {
-  id: string;
-  userId: string;
-  title: string;
-  template: string;
-  typstKey: string;
-  citationFormat: string;
-  citationCount: number;
-  createdAt: string;
-  updatedAt: string;
-  lastAccessedAt: string;
-}
-
-interface DocumentContent {
-  content: string;
 }
 
 async function fetchDocument(id: string, token: string | null): Promise<Document> {

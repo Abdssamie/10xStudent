@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useDocument, useDocumentContent, useUpdateDocumentContent } from '@/hooks/use-document';
+import { useUpdateDocument } from '@/hooks/use-documents';
 import { Editor } from '@/components/documents/editor';
 import Link from 'next/link';
 
@@ -56,6 +57,8 @@ export default function DocumentEditorPage() {
     <div className="h-[calc(100vh-10rem)]">
       <Editor
         title={document.title}
+        documentId={document.id}
+        docType={document.docType}
         initialContent={content}
         onSave={handleSave}
         onExportPdf={() => {

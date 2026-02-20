@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { citationFormatSchema, type CitationFormat } from "../document";
 
-export const userCitationFormatSchema = z.enum(["APA", "MLA", "Chicago"]);
+export { citationFormatSchema };
+export type { CitationFormat };
 
 export const userPreferencesSchema = z.object({
-  defaultCitationFormat: userCitationFormatSchema,
+  defaultCitationFormat: citationFormatSchema,
 });
 
 export const userSettingsResponseSchema = z.object({
@@ -14,5 +16,9 @@ export const userSettingsResponseSchema = z.object({
 });
 
 export const updateUserPreferencesRequestSchema = z.object({
-  defaultCitationFormat: userCitationFormatSchema.optional(),
+  defaultCitationFormat: citationFormatSchema.optional(),
 });
+
+export type UserPreferences = z.infer<typeof userPreferencesSchema>;
+export type UserSettingsResponse = z.infer<typeof userSettingsResponseSchema>;
+export type UpdateUserPreferencesRequest = z.infer<typeof updateUserPreferencesRequestSchema>;

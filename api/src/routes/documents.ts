@@ -50,7 +50,7 @@ documentsRouter.openapi(createDocumentRoute, async (c) => {
   const db = services.db;
   const storageService = services.storageService;
 
-  const { title, template, citationFormat } = c.req.valid("json");
+  const { title, template, citationFormat, docType } = c.req.valid("json");
 
   const documentId = crypto.randomUUID();
   const stubContent = `= ${title}\n\n`;
@@ -66,6 +66,7 @@ documentsRouter.openapi(createDocumentRoute, async (c) => {
       userId,
       title,
       template,
+      docType,
       typstKey,
       citationFormat,
     })
@@ -190,6 +191,7 @@ documentsRouter.openapi(updateDocumentRoute, async (c) => {
   const updates: Record<string, string> = {};
   if (body.title !== undefined) updates.title = body.title;
   if (body.template !== undefined) updates.template = body.template;
+  if (body.docType !== undefined) updates.docType = body.docType;
   if (body.citationFormat !== undefined) updates.citationFormat = body.citationFormat;
 
   const [updated] = await db

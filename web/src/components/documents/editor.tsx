@@ -14,12 +14,14 @@ import { useTypst } from '@/hooks/use-typst';
 
 interface EditorProps {
   title: string;
+  documentId: string;
+  docType: string;
   initialContent: string;
   onSave: (content: string) => void;
   onExportPdf: () => void;
 }
 
-export function Editor({ title, initialContent, onSave, onExportPdf }: EditorProps) {
+export function Editor({ title, documentId, docType, initialContent, onSave, onExportPdf }: EditorProps) {
   const [content, setContent] = useState(initialContent);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -33,13 +35,82 @@ export function Editor({ title, initialContent, onSave, onExportPdf }: EditorPro
     onSave(value);
   }, 2000);
 
-  const compile = useDebouncedCallback(async (source: string) => {
+  const compile = useDebouncedCallback(async (source: string, paperType: string) => {
     if (!isReady) return;
 
     try {
       setError(null);
-      const result = await $typst.svg({ mainContent: source });
-      setSvg(result);
+      let compileContent = source;
+      if (paperType !== 'auto') {
+        compileContent = `#set page(paper: "${paperType}")\n` + source;
+      }
+      const result = await $typst.svg({ mainContent: compileContent });
+
+      // Add visual gaps and shadows between pages
+      const gapSize = 30; // 30px gap between pages
+      
+      let processedSvg = result;
+      
+      const totalPages = (result.match(/<g class="typst-page"/g) || []).length;
+      
+      // We will match the start of each page and wrap it in a new `<g>` container
+      // This allows us to translate the entire page down, add a shadow/background,
+      // and keep the original page content intact.
+      const regex = /<g class="typst-page" transform="translate\(([^,]+),\s*([^)]+)\)" data-tid="([^"]+)" data-page-width="([^"]+)" data-page-height="([^"]+)">/g;
+      
+      let match;
+      let pageIndex = 0;
+      let replacements = [];
+      
+      while ((match = regex.exec(result)) !== null) {
+        const fullMatch = match[0];
+        const x = match[1] || '0';
+        const y = match[2] || '0';
+        const tid = match[3] || '';
+        const w = match[4] || '0';
+        const h = match[5] || '0';
+        
+        const yOffset = parseFloat(y);
+        const totalGap = pageIndex * gapSize;
+        const newY = yOffset + totalGap;
+        
+        const replacement = `<g class="typst-page-wrapper" transform="translate(${x}, ${newY})">
+          <rect width="${w}" height="${h}" fill="white" class="shadow-md" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)) drop-shadow(0 10px 15px rgba(0,0,0,0.05));" />
+          <g class="typst-page" transform="translate(0, 0)" data-tid="${tid}" data-page-width="${w}" data-page-height="${h}">`;
+          
+        replacements.push({ find: fullMatch, replace: replacement });
+        pageIndex++;
+      }
+      
+      // Apply replacements
+      for (const rep of replacements) {
+        processedSvg = processedSvg.replace(rep.find, rep.replace);
+      }
+      
+      // Because we added an opening <g class="typst-page-wrapper">, we need to add a closing </g>
+      // The easiest way is to add it right before the next typst-page-wrapper or right before the final </svg>
+      // We look for </g>\n immediately followed by <g class="typst-page-wrapper" or </svg>
+      // The Typst generated SVG usually has a flat hierarchy for pages, so this works nicely.
+      processedSvg = processedSvg.replace(/(<\/g>\n)(?=<g class="typst-page-wrapper"|<\/svg>)/g, '$1</g>\n');
+      
+      // Update the overall SVG viewBox to account for the gaps
+      if (totalPages > 1) {
+        const totalAddedHeight = (totalPages - 1) * gapSize;
+        
+        // Find and replace the viewBox height
+        processedSvg = processedSvg.replace(/viewBox="0 0 ([^ ]+) ([^"]+)"/, (m, vw, vh) => {
+          const newHeight = parseFloat(vh) + totalAddedHeight;
+          return `viewBox="0 0 ${vw} ${newHeight}"`;
+        });
+        
+        // Find and replace the hardcoded SVG height
+        processedSvg = processedSvg.replace(/<svg[^>]+height="([^"]+)"/, (m, h) => {
+          const newHeight = parseFloat(h) + totalAddedHeight;
+          return m.replace(`height="${h}"`, `height="${newHeight}"`);
+        });
+      }
+
+      setSvg(processedSvg);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Compilation error');
     }
@@ -47,9 +118,9 @@ export function Editor({ title, initialContent, onSave, onExportPdf }: EditorPro
 
   useEffect(() => {
     if (isReady && content) {
-      compile(content);
+      compile(content, docType);
     }
-  }, [content, isReady, compile]);
+  }, [content, isReady, compile, docType]);
 
   const handleChange = (value: string) => {
     setContent(value);
@@ -122,19 +193,21 @@ export function Editor({ title, initialContent, onSave, onExportPdf }: EditorPro
 
       <ResizableHandle withHandle />
 
-      <ResizablePanel defaultSize={50} minSize={30}>
+      <ResizablePanel defaultSize={50} minSize={15}>
         <div className="flex h-full flex-col">
           <div className="border-b bg-muted/50 px-4 py-2 flex items-center justify-between">
             <span className="text-sm font-medium">Preview</span>
-            <Button variant="outline" size="sm" onClick={onExportPdf}>
-              <Download className="mr-2 h-4 w-4" />
-              Export PDF
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={onExportPdf}>
+                <Download className="mr-2 h-4 w-4" />
+                Export PDF
+              </Button>
+            </div>
           </div>
-          <ScrollArea className="flex-1 bg-white dark:bg-slate-950">
-            <div className="p-8">
+          <ScrollArea className="flex-1 bg-slate-100 dark:bg-slate-900">
+            <div className="flex justify-center p-8">
               {error ? (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 w-full max-w-2xl">
                   <h3 className="mb-2 font-semibold text-destructive">Compilation Error</h3>
                   <pre className="whitespace-pre-wrap text-sm text-destructive/90">{error}</pre>
                 </div>
@@ -143,7 +216,8 @@ export function Editor({ title, initialContent, onSave, onExportPdf }: EditorPro
                   className="typst-preview"
                   style={{
                     color: 'black',
-                    backgroundColor: 'white',
+                    backgroundColor: 'transparent',
+                    width: docType === 'auto' ? '100%' : 'auto',
                   }}
                   dangerouslySetInnerHTML={{ __html: svg }}
                 />

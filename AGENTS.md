@@ -43,6 +43,11 @@ bun run test -- --run
 8. **Database:** Drizzle ORM only
 9. **Validation:** Zod schemas for all input
 10. **Array Access:** Always check for undefined: `arr[0]` returns `T | undefined`
+11. **Shared Types (CRITICAL):** All API request/response schemas and domain types MUST be defined in `shared/` package. Never duplicate Zod schemas in `web/` or `api/`. Import from `@shared/src` instead.
+12. **Type Consistency:** 
+    - Use enums (e.g., `citationFormatSchema`) from shared for all validated values
+    - Import inferred types (e.g., `type CreateDocumentInput`) from shared
+    - Validate API responses in web hooks using shared schemas (e.g., `documentResponseSchema.parse(data)`)
 
 ## Troubleshooting
 

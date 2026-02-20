@@ -7,19 +7,20 @@ import type { ServiceContainer } from "@/services/container";
 import { CreditManager } from "@/services/credit-manager";
 import { AgentService } from "@/services/agent";
 import * as schema from "@/infrastructure/db/schema";
+import type { User } from "@/infrastructure/db/schema";
 
 describe("GET /api/v1/documents/:id/content", () => {
-  const userId = "660e8400-e29b-41d4-a716-446655440001";
   let testDb: TestDatabaseService;
   let serviceContainer: ServiceContainer;
   let mockStorage: MockStorageService;
+  let testUser: User;
+  const testClerkId = "660e8400-e29b-41d4-a716-446655440001";
 
   beforeEach(async () => {
     testDb = new TestDatabaseService(process.env.DATABASE_URL!);
     await testDb.cleanDatabase();
-    await testDb.seedTestUser(userId, 1000);
+    testUser = await testDb.seedTestUser(testClerkId, 1000);
     
-    // Create service container with mock storage
     mockStorage = new MockStorageService();
     const db = testDb.getDb();
     const creditManager = new CreditManager(db);
@@ -39,34 +40,34 @@ describe("GET /api/v1/documents/:id/content", () => {
 
   it("should retrieve Typst content from R2", async () => {
     const documentId = crypto.randomUUID();
-    const typstContent = "= My Document\\n\\nThis is content.";
+    const typstContent = "= My Document\n\nThis is content.";
     const db = testDb.getDb();
     
     await db.insert(schema.documents).values({
       id: documentId,
-      userId,
+      userId: testUser.id,
       title: "Test Doc",
-      template: "default",
-      typstKey: `documents/${userId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${testUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    await mockStorage.uploadDocument(userId, documentId, typstContent);
+    await mockStorage.uploadDocument(testUser.id, documentId, typstContent);
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/content`, {
       method: "GET",
     });
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as { content: string };
     expect(data.content).toBe(typstContent);
   });
 
   it("should return 404 if document not found in database", async () => {
     const fakeId = crypto.randomUUID();
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${fakeId}/content`, {
       method: "GET",
     });
@@ -80,14 +81,14 @@ describe("GET /api/v1/documents/:id/content", () => {
     
     await db.insert(schema.documents).values({
       id: documentId,
-      userId,
+      userId: testUser.id,
       title: "Test Doc",
-      template: "default",
-      typstKey: `documents/${userId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${testUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/content`, {
       method: "GET",
     });
@@ -97,20 +98,20 @@ describe("GET /api/v1/documents/:id/content", () => {
 
   it("should return 404 if user does not own document", async () => {
     const documentId = crypto.randomUUID();
-    const otherUserId = "660e8400-e29b-41d4-a716-446655440002";
+    const otherClerkId = "660e8400-e29b-41d4-a716-446655440002";
     const db = testDb.getDb();
     
-    await testDb.seedTestUser(otherUserId, 1000);
+    const otherUser = await testDb.seedTestUser(otherClerkId, 1000);
     await db.insert(schema.documents).values({
       id: documentId,
-      userId: otherUserId,
+      userId: otherUser.id,
       title: "Other User Doc",
-      template: "default",
-      typstKey: `documents/${otherUserId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${otherUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/content`, {
       method: "GET",
     });
@@ -120,17 +121,17 @@ describe("GET /api/v1/documents/:id/content", () => {
 });
 
 describe("PUT /api/v1/documents/:id/content", () => {
-  const userId = "660e8400-e29b-41d4-a716-446655440001";
   let testDb: TestDatabaseService;
   let serviceContainer: ServiceContainer;
   let mockStorage: MockStorageService;
+  let testUser: User;
+  const testClerkId = "660e8400-e29b-41d4-a716-446655440001";
 
   beforeEach(async () => {
     testDb = new TestDatabaseService(process.env.DATABASE_URL!);
     await testDb.cleanDatabase();
-    await testDb.seedTestUser(userId, 1000);
+    testUser = await testDb.seedTestUser(testClerkId, 1000);
     
-    // Create service container with mock storage
     mockStorage = new MockStorageService();
     const db = testDb.getDb();
     const creditManager = new CreditManager(db);
@@ -150,22 +151,22 @@ describe("PUT /api/v1/documents/:id/content", () => {
 
   it("should update Typst content in R2", async () => {
     const documentId = crypto.randomUUID();
-    const initialContent = "= Initial\\n\\nOld content.";
-    const updatedContent = "= Updated\\n\\nNew content.";
+    const initialContent = "= Initial\n\nOld content.";
+    const updatedContent = "= Updated\n\nNew content.";
     const db = testDb.getDb();
     
     await db.insert(schema.documents).values({
       id: documentId,
-      userId,
+      userId: testUser.id,
       title: "Test Doc",
-      template: "default",
-      typstKey: `documents/${userId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${testUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    await mockStorage.uploadDocument(userId, documentId, initialContent);
+    await mockStorage.uploadDocument(testUser.id, documentId, initialContent);
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/content`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -174,7 +175,7 @@ describe("PUT /api/v1/documents/:id/content", () => {
 
     expect(response.status).toBe(200);
 
-    const retrievedContent = await mockStorage.getDocument(userId, documentId);
+    const retrievedContent = await mockStorage.getDocument(testUser.id, documentId);
     expect(retrievedContent).toBe(updatedContent);
   });
 
@@ -184,14 +185,14 @@ describe("PUT /api/v1/documents/:id/content", () => {
     
     await db.insert(schema.documents).values({
       id: documentId,
-      userId,
+      userId: testUser.id,
       title: "Test Doc",
-      template: "default",
-      typstKey: `documents/${userId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${testUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/content`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -204,7 +205,7 @@ describe("PUT /api/v1/documents/:id/content", () => {
   it("should return 404 if document not found", async () => {
     const fakeId = crypto.randomUUID();
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${fakeId}/content`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -216,20 +217,20 @@ describe("PUT /api/v1/documents/:id/content", () => {
 
   it("should return 404 if user does not own document", async () => {
     const documentId = crypto.randomUUID();
-    const otherUserId = "660e8400-e29b-41d4-a716-446655440002";
+    const otherClerkId = "660e8400-e29b-41d4-a716-446655440002";
     const db = testDb.getDb();
     
-    await testDb.seedTestUser(otherUserId, 1000);
+    const otherUser = await testDb.seedTestUser(otherClerkId, 1000);
     await db.insert(schema.documents).values({
       id: documentId,
-      userId: otherUserId,
+      userId: otherUser.id,
       title: "Other User Doc",
-      template: "default",
-      typstKey: `documents/${otherUserId}/${documentId}/main.typ`,
+      template: "research-paper",
+      typstKey: `documents/${otherUser.id}/${documentId}/main.typ`,
       citationFormat: "APA",
     });
 
-    const app = createTestAppWithRouter(serviceContainer, userId, documentsRouter, "/");
+    const app = createTestAppWithRouter(serviceContainer, testUser, documentsRouter, "/");
     const response = await app.request(`/${documentId}/content`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

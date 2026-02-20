@@ -3,6 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { toast } from 'sonner';
+import { z } from 'zod';
+import {
+  documentResponseSchema,
+  type DocumentResponse,
+  type CreateDocumentInput,
+  documentContentResponseSchema,
+  type DocumentContentResponse,
+  type UpdateDocumentBody,
+} from '@shared/src/api/documents';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -10,30 +19,7 @@ if (!API_URL) {
   throw new Error('NEXT_PUBLIC_API_URL is not set. Please configure it in your environment variables.');
 }
 
-interface Document {
-  id: string;
-  userId: string;
-  title: string;
-  template: string;
-  typstKey: string;
-  citationFormat: string;
-  citationCount: number;
-  createdAt: string;
-  updatedAt: string;
-  lastAccessedAt: string;
-}
-
-interface CreateDocumentInput {
-  title: string;
-  template: string;
-  citationFormat: string;
-}
-
-interface DocumentContent {
-  content: string;
-}
-
-async function fetchDocuments(token: string | null): Promise<Document[]> {
+async function fetchDocuments(token: string | null): Promise<DocumentResponse[]> {
   const response = await fetch(`${API_URL}/api/v1/documents`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -42,10 +28,11 @@ async function fetchDocuments(token: string | null): Promise<Document[]> {
     throw new Error('Failed to fetch documents');
   }
 
-  return response.json();
+  const data = await response.json();
+  return z.array(documentResponseSchema).parse(data);
 }
 
-async function createDocument(input: CreateDocumentInput, token: string | null): Promise<Document> {
+async function createDocument(input: CreateDocumentInput, token: string | null): Promise<DocumentResponse> {
   const response = await fetch(`${API_URL}/api/v1/documents`, {
     method: 'POST',
     headers: {
@@ -59,7 +46,8 @@ async function createDocument(input: CreateDocumentInput, token: string | null):
     throw new Error('Failed to create document');
   }
 
-  return response.json();
+  const data = await response.json();
+  return documentResponseSchema.parse(data);
 }
 
 async function deleteDocument(id: string, token: string | null): Promise<void> {
@@ -73,7 +61,7 @@ async function deleteDocument(id: string, token: string | null): Promise<void> {
   }
 }
 
-async function updateDocument(id: string, data: { title: string }, token: string | null): Promise<Document> {
+async function updateDocument(id: string, data: UpdateDocumentBody, token: string | null): Promise<DocumentResponse> {
   const response = await fetch(`${API_URL}/api/v1/documents/${id}`, {
     method: 'PATCH',
     headers: {
@@ -87,10 +75,11 @@ async function updateDocument(id: string, data: { title: string }, token: string
     throw new Error('Failed to update document');
   }
 
-  return response.json();
+  const json = await response.json();
+  return documentResponseSchema.parse(json);
 }
 
-async function fetchDocumentContent(id: string, token: string | null): Promise<DocumentContent> {
+async function fetchDocumentContent(id: string, token: string | null): Promise<DocumentContentResponse> {
   const response = await fetch(`${API_URL}/api/v1/documents/${id}/content`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -99,7 +88,8 @@ async function fetchDocumentContent(id: string, token: string | null): Promise<D
     throw new Error('Failed to fetch document content');
   }
 
-  return response.json();
+  const data = await response.json();
+  return documentContentResponseSchema.parse(data);
 }
 
 async function updateDocumentContent(id: string, content: string, token: string | null): Promise<{ success: boolean }> {
@@ -174,7 +164,7 @@ export function useUpdateDocument() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { title: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: UpdateDocumentBody }) => {
       const token = await getToken();
       return updateDocument(id, data, token);
     },

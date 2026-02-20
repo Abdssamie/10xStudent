@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ADD COLUMN "doc_type" text DEFAULT 'a4' NOT NULL;

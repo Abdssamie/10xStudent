@@ -1,24 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@clerk/nextjs';
-
-type CitationFormat = 'APA' | 'MLA' | 'Chicago';
-
-type UserPreferences = {
-  defaultCitationFormat: CitationFormat;
-};
-
-type UserSettings = {
-  id: string;
-  credits: number;
-  preferences: UserPreferences | null;
-  creditsResetAt: string;
-};
+import {
+  type UserPreferences,
+  type UserSettingsResponse,
+  userSettingsResponseSchema,
+  userPreferencesSchema,
+} from '@shared/src/api/user';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export function useUserSettings() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [settings, setSettings] = useState<UserSettingsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -43,7 +36,8 @@ export function useUserSettings() {
       }
 
       const data = await response.json();
-      setSettings(data);
+      const validated = userSettingsResponseSchema.parse(data);
+      setSettings(validated);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
@@ -90,7 +84,8 @@ export function useUpdatePreferences() {
         }
 
         const data = await response.json();
-        return data;
+        const validated = userPreferencesSchema.parse(data);
+        return validated;
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Unknown error'));
         return null;

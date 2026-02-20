@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { createDocumentSchema } from "../document";
+import { createDocumentSchema, docTypeSchema, citationFormatSchema } from "../document";
 
 export const documentResponseSchema = z.object({
   id: z.string().uuid(),
   userId: z.string(),
   title: z.string(),
   template: z.string(),
+  docType: z.string(),
   typstKey: z.string(),
   citationFormat: z.string(),
   citationCount: z.number(),
@@ -17,7 +18,8 @@ export const documentResponseSchema = z.object({
 export const updateDocumentBodySchema = z.object({
   title: z.string().min(1).max(200).optional(),
   template: z.string().optional(),
-  citationFormat: z.enum(["APA", "MLA", "Chicago"]).optional(),
+  docType: docTypeSchema.optional(),
+  citationFormat: citationFormatSchema.optional(),
 });
 
 export const documentContentResponseSchema = z.object({
@@ -32,4 +34,11 @@ export const bibliographyResponseSchema = z.object({
   bibliography: z.string(),
 });
 
+export type DocumentResponse = z.infer<typeof documentResponseSchema>;
+export type UpdateDocumentBody = z.infer<typeof updateDocumentBodySchema>;
+export type DocumentContentResponse = z.infer<typeof documentContentResponseSchema>;
+export type UpdateDocumentContentBody = z.infer<typeof updateDocumentContentBodySchema>;
+export type BibliographyResponse = z.infer<typeof bibliographyResponseSchema>;
+
 export { createDocumentSchema };
+export type { CreateDocumentInput } from "../document";

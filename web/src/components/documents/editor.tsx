@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import { typst } from 'codemirror-lang-typst';
 import { $typst } from '@myriaddreamin/typst.ts';
 import { useDebouncedCallback } from 'use-debounce';
 import { EditorView } from '@codemirror/view';
+import { history } from '@codemirror/commands';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { useTypst } from '@/hooks/use-typst';
 import { processTypstSvg } from '@/utils/typst-svg-processor';
@@ -18,11 +19,18 @@ interface EditorProps {
   documentId: string;
   docType: string;
   initialContent: string;
-  onSave: (content: string) => void;
+  onContentChange: (content: string, hasUnsavedChanges: boolean) => void;
   onExportPdf: () => void;
 }
 
-export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorProps) {
+export interface EditorHandle {
+  markAsSaved: () => void;
+}
+
+export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
+  { docType, initialContent, onContentChange, onExportPdf },
+  ref,
+) {
   const [content, setContent] = useState(initialContent);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -30,14 +38,22 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
   const isMobile = useIsMobile();
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const compileAbortRef = useRef<AbortController | null>(null);
+  const savedContentRef = useRef(initialContent);
 
   useEffect(() => {
     setContent(initialContent);
+    savedContentRef.current = initialContent;
   }, [initialContent]);
 
-  const debouncedSave = useDebouncedCallback((value: string) => {
-    onSave(value);
-  }, 2000);
+  useImperativeHandle(
+    ref,
+    () => ({
+      markAsSaved: () => {
+        savedContentRef.current = content;
+      },
+    }),
+    [content],
+  );
 
   const compile = useDebouncedCallback(async (source: string, paperType: string) => {
     if (!isReady) return;
@@ -82,8 +98,10 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
 
   const handleChange = (value: string) => {
     setContent(value);
-    debouncedSave(value);
+    const hasUnsavedChanges = value !== savedContentRef.current;
+    onContentChange(value, hasUnsavedChanges);
   };
+
 
   if (isLoading) {
     return (
@@ -123,7 +141,7 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
                 value={content}
                 height="100%"
                 theme={vscodeDark}
-                extensions={[typst(), EditorView.lineWrapping]}
+                extensions={[typst(), EditorView.lineWrapping, history()]}
                 onChange={handleChange}
                 className="h-full text-sm w-full [&_.cm-editor]:h-full [&_.cm-editor]:p-0 [&_.cm-scroller]:overflow-auto"
                 basicSetup={{
@@ -148,4 +166,4 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
       )}
     </ResizablePanelGroup>
   );
-}
+});

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useDocument, useDocumentContent, useUpdateDocumentContent } from '@/hooks/use-document';
 import { Editor } from '@/components/documents/editor';
+import type { EditorHandle } from '@/components/documents/editor';
 import { EditorMenuBar } from '@/components/documents/editor-menu-bar';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function DocumentEditorPage() {
   const params = useParams();
@@ -17,6 +19,8 @@ export default function DocumentEditorPage() {
   const updateContent = useUpdateDocumentContent(documentId);
 
   const [content, setContent] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const editorRef = useRef<EditorHandle | null>(null);
 
   useEffect(() => {
     if (documentContent?.content) {
@@ -24,8 +28,31 @@ export default function DocumentEditorPage() {
     }
   }, [documentContent]);
 
-  const handleSave = (newContent: string) => {
-    updateContent.mutate(newContent);
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const handleContentChange = (newContent: string, unsaved: boolean) => {
+    setContent(newContent);
+    setHasUnsavedChanges(unsaved);
+  };
+
+  const handleSave = () => {
+    updateContent.mutate(content, {
+      onSuccess: () => {
+        setHasUnsavedChanges(false);
+        editorRef.current?.markAsSaved();
+        toast.success('Document saved');
+      },
+    });
   };
 
   if (isLoadingDoc || isLoadingContent) {
@@ -57,17 +84,20 @@ export default function DocumentEditorPage() {
     <div className="h-screen w-full flex flex-col overflow-hidden">
       <EditorMenuBar
         title={document.title}
-        onSave={() => handleSave(content)}
+        hasUnsavedChanges={hasUnsavedChanges}
+        isSaving={updateContent.isPending}
+        onSave={handleSave}
         onExportPdf={() => {
           console.log('Export PDF clicked');
         }}
       />
       <div className="flex-1 overflow-hidden">
         <Editor
+          ref={editorRef}
           documentId={document.id}
           docType={document.docType}
           initialContent={content}
-          onSave={handleSave}
+          onContentChange={handleContentChange}
           onExportPdf={() => {
             console.log('Export PDF clicked');
           }}

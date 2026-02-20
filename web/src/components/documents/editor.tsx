@@ -29,6 +29,7 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
   const { isLoading, isReady, error: initError } = useTypst();
   const isMobile = useIsMobile();
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+  const compileAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setContent(initialContent);
@@ -41,6 +42,12 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
   const compile = useDebouncedCallback(async (source: string, paperType: string) => {
     if (!isReady) return;
 
+    // Cancel previous compilation
+    if (compileAbortRef.current) {
+      compileAbortRef.current.abort();
+    }
+    compileAbortRef.current = new AbortController();
+
     try {
       setError(null);
       let compileContent = source;
@@ -49,10 +56,13 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
       }
       const result = await $typst.svg({ mainContent: compileContent });
 
+      if (compileAbortRef.current.signal.aborted) return;
+
       const processedSvg = processTypstSvg(result);
 
       setSvg(processedSvg);
     } catch (err) {
+      if (compileAbortRef.current?.signal.aborted) return;
       setError(err instanceof Error ? err.message : 'Compilation error');
     }
   }, 500);
@@ -61,7 +71,14 @@ export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorP
     if (isReady && content) {
       compile(content, docType);
     }
-  }, [content, isReady, compile, docType]);
+    
+    return () => {
+      // Cleanup on unmount
+      if (compileAbortRef.current) {
+        compileAbortRef.current.abort();
+      }
+    };
+  }, [content, isReady, docType]); // Removed 'compile' from dependencies
 
   const handleChange = (value: string) => {
     setContent(value);

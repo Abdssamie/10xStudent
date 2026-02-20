@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useDocument, useDocumentContent, useUpdateDocumentContent } from '@/hooks/use-document';
 import { Editor } from '@/components/documents/editor';
+import { EditorMenuBar } from '@/components/documents/editor-menu-bar';
 import Link from 'next/link';
 
 export default function DocumentEditorPage() {
@@ -53,17 +54,26 @@ export default function DocumentEditorPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-6rem)] w-full overflow-hidden">
-      <Editor
+    <div className="h-screen w-full flex flex-col overflow-hidden">
+      <EditorMenuBar
         title={document.title}
-        documentId={document.id}
-        docType={document.docType}
-        initialContent={content}
-        onSave={handleSave}
+        onSave={() => handleSave(content)}
         onExportPdf={() => {
           console.log('Export PDF clicked');
         }}
       />
+      <div className="flex-1 overflow-hidden">
+        <Editor
+          title={document.title}
+          documentId={document.id}
+          docType={document.docType}
+          initialContent={content}
+          onSave={handleSave}
+          onExportPdf={() => {
+            console.log('Export PDF clicked');
+          }}
+        />
+      </div>
     </div>
   );
 }

@@ -62,6 +62,7 @@ export function useDocument(id: string) {
       return fetchDocument(id, token);
     },
     enabled: !!id,
+    staleTime: Infinity,
   });
 }
 
@@ -75,6 +76,7 @@ export function useDocumentContent(id: string) {
       return fetchDocumentContent(id, token);
     },
     enabled: !!id,
+    staleTime: 5 * 60_000, // 5 minutes — content only changes when user saves
   });
 }
 

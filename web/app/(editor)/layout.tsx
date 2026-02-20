@@ -17,11 +17,21 @@ export default async function EditorLayout({
   const defaultOpen = cookieStore.get('sidebar_state')?.value === 'true';
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar />
-      <SidebarInset>
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <>
+      {/* Preload the Typst compiler WASM so the browser fetches it in parallel with JS */}
+      {/* eslint-disable-next-line @next/next/no-head-element */}
+      <link
+        rel="preload"
+        href="/wasm/typst_ts_web_compiler_bg.wasm"
+        as="fetch"
+        crossOrigin="anonymous"
+      />
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <AppSidebar />
+        <SidebarInset>
+          {children}
+        </SidebarInset>
+      </SidebarProvider>
+    </>
   );
 }

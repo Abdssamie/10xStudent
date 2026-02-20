@@ -18,21 +18,17 @@ export default function DocumentEditorPage() {
   const { data: documentContent, isLoading: isLoadingContent } = useDocumentContent(documentId);
   const updateContent = useUpdateDocumentContent(documentId);
 
-  const [content, setContent] = useState('');
+  // Track current content in a ref — the Editor owns its own state internally,
+  // we only need this for the save mutation.
+  const contentRef = useRef(documentContent?.content ?? '');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const editorRef = useRef<EditorHandle | null>(null);
 
-  useEffect(() => {
-    if (documentContent?.content) {
-      setContent(documentContent.content);
-    }
-  }, [documentContent]);
-
+  // Sync unsaved-change indicator with window unload
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = '';
       }
     };
 
@@ -41,12 +37,12 @@ export default function DocumentEditorPage() {
   }, [hasUnsavedChanges]);
 
   const handleContentChange = (newContent: string, unsaved: boolean) => {
-    setContent(newContent);
+    contentRef.current = newContent;
     setHasUnsavedChanges(unsaved);
   };
 
   const handleSave = () => {
-    updateContent.mutate(content, {
+    updateContent.mutate(contentRef.current, {
       onSuccess: () => {
         setHasUnsavedChanges(false);
         editorRef.current?.markAsSaved();
@@ -96,7 +92,7 @@ export default function DocumentEditorPage() {
           ref={editorRef}
           documentId={document.id}
           docType={document.docType}
-          initialContent={content}
+          initialContent={documentContent.content}
           onContentChange={handleContentChange}
           onExportPdf={() => {
             console.log('Export PDF clicked');

@@ -30,7 +30,7 @@ export function DocumentPreview({
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
-            <div className="border-b bg-muted/50 px-4 py-2 flex items-center justify-between">
+            <div className="border-b bg-muted/50 px-4 h-12 flex items-center justify-between">
               <span className="text-sm font-medium">Preview</span>
               <div className="flex items-center gap-2">
                 <Button

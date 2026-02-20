@@ -91,11 +91,11 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="flex-1 w-full h-full overflow-hidden">
+    <ResizablePanelGroup className="flex-1 w-full h-full overflow-hidden">
       <ResizablePanel defaultSize={isMobile ? 100 : 50} minSize={30} className="min-w-0">
-        <Tabs defaultValue="source" className="flex h-full flex-col w-full min-w-0">
-          <div className="border-b bg-muted/50 px-4 py-2 flex-shrink-0">
-            <div className="flex items-center justify-between">
+        <Tabs defaultValue="source" className="flex h-full flex-col w-full min-w-0 mb-0">
+          <div className="border-b bg-muted/50 px-4 h-12 shrink-0">
+            <div className="flex items-center justify-between h-full">
               <h1 className="text-sm font-semibold truncate mr-4">{title}</h1>
               <TabsList variant="line" className="h-7">
                 <TabsTrigger value="source" className="text-xs px-2 h-6">Source</TabsTrigger>
@@ -104,15 +104,15 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
               </TabsList>
             </div>
           </div>
-          <TabsContent value="source" className="flex-1 overflow-hidden min-h-0 min-w-0 m-0 w-full relative">
-            <div className="absolute inset-0 w-full h-full">
+          <TabsContent value="source" className="flex-1 overflow-hidden min-h-0 min-w-0 m-0 p-0 w-full relative">
+            <div className="absolute inset-0 w-full h-full mt-0 pt-0">
               <CodeMirror
                 value={content}
                 height="100%"
                 theme={vscodeDark}
                 extensions={[typst(), EditorView.lineWrapping]}
                 onChange={handleChange}
-                className="h-full text-sm w-full [&_.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"
+                className="pt-0 mt-0 h-full text-sm w-full [&_.cm-editor]:h-full [&_.cm-editor]:p-0 [&_.cm-scroller]:overflow-auto"
                 basicSetup={{
                   lineNumbers: true,
                   highlightActiveLineGutter: true,

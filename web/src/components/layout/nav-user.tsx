@@ -17,7 +17,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { SignOutButton, useUser } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 import {
   BadgeCheck,
   ChevronsUpDown,
@@ -29,6 +29,7 @@ import {
 export function NavUser() {
   const { isMobile } = useSidebar();
   const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
   if (!isLoaded || !user) {
     return null;
@@ -104,12 +105,10 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <SignOutButton>
-              <DropdownMenuItem>
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </SignOutButton>
+            <DropdownMenuItem onClick={() => signOut({ redirectUrl: '/sign-in' })}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

@@ -11,7 +11,7 @@ import {
   documentContentResponseSchema,
   type DocumentContentResponse,
   type UpdateDocumentBody,
-} from '@shared/src/api/documents';
+} from '@shared/src';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 

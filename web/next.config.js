@@ -1,9 +1,13 @@
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { withSentryConfig } from '@sentry/nextjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {
-    root: '.',
+    root: path.join(__dirname, '..'),
   },
 };
 

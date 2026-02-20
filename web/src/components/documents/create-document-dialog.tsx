@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button';
 import { useCreateDocument } from '@/hooks/use-documents';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import { useRouter } from 'next/navigation';
-import { createDocumentFormSchema, type CreateDocumentFormInput } from '@shared/src/document';
+import { createDocumentFormSchema, type CreateDocumentFormInput } from '@shared/src';
 
 type CreateDocumentForm = CreateDocumentFormInput;
 

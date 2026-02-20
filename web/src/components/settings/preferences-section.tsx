@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useUserSettings, useUpdatePreferences } from '@/hooks/use-user-settings';
-import { type CitationFormat } from '@shared/src/api/user';
+import { type CitationFormat } from '@shared/src';
 
 export function PreferencesSection() {
   const { settings, isLoading } = useUserSettings();

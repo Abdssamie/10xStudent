@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { toast } from 'sonner';
-import type { DocumentResponse as Document, DocumentContentResponse as DocumentContent } from '@shared/src/api/documents';
+import type { DocumentResponse as Document, DocumentContentResponse as DocumentContent } from '@shared/src';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 

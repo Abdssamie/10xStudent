@@ -64,7 +64,6 @@ export default function DocumentEditorPage() {
       />
       <div className="flex-1 overflow-hidden">
         <Editor
-          title={document.title}
           documentId={document.id}
           docType={document.docType}
           initialContent={content}

@@ -8,7 +8,6 @@ import { $typst } from '@myriaddreamin/typst.ts';
 import { useDebouncedCallback } from 'use-debounce';
 import { EditorView } from '@codemirror/view';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTypst } from '@/hooks/use-typst';
 import { processTypstSvg } from '@/utils/typst-svg-processor';
 import { DocumentPreview } from './document-preview';
@@ -16,7 +15,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { FormattingToolbar } from './formatting-toolbar';
 
 interface EditorProps {
-  title: string;
   documentId: string;
   docType: string;
   initialContent: string;
@@ -24,7 +22,7 @@ interface EditorProps {
   onExportPdf: () => void;
 }
 
-export function Editor({ title, docType, initialContent, onSave, onExportPdf }: EditorProps) {
+export function Editor({ docType, initialContent, onSave, onExportPdf }: EditorProps) {
   const [content, setContent] = useState(initialContent);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -95,22 +93,14 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
   return (
     <ResizablePanelGroup className="flex-1 w-full h-full overflow-hidden">
       <ResizablePanel defaultSize={isMobile ? 100 : 50} minSize={30} className="min-w-0">
-        <Tabs defaultValue="source" className="flex h-full flex-col w-full min-w-0 mb-0">
+        <div className="flex h-full flex-col w-full min-w-0">
           <div className="border-b bg-muted/50 h-12 shrink-0">
-            <div className="flex items-center justify-between h-full px-4">
-              <div className="flex items-center gap-4">
-                <h1 className="text-sm font-semibold truncate">{title}</h1>
-                <FormattingToolbar editorView={editorRef.current?.view || null} />
-              </div>
-              <TabsList variant="line" className="h-7">
-                <TabsTrigger value="source" className="text-xs px-2 h-6">Source</TabsTrigger>
-                <TabsTrigger value="citations" className="text-xs px-2 h-6">Citations</TabsTrigger>
-                <TabsTrigger value="ai-agent" className="text-xs px-2 h-6">AI Agent</TabsTrigger>
-              </TabsList>
+            <div className="flex items-center h-full px-4">
+              <FormattingToolbar editorView={editorRef.current?.view || null} />
             </div>
           </div>
-          <TabsContent value="source" className="flex-1 overflow-hidden min-h-0 min-w-0 m-0 p-0 w-full relative">
-            <div className="absolute inset-0 w-full h-full mt-0 pt-0">
+          <div className="flex-1 overflow-hidden min-h-0 min-w-0 w-full relative">
+            <div className="absolute inset-0 w-full h-full">
               <CodeMirror
                 ref={editorRef}
                 value={content}
@@ -118,7 +108,7 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
                 theme={vscodeDark}
                 extensions={[typst(), EditorView.lineWrapping]}
                 onChange={handleChange}
-                className="pt-0 mt-0 h-full text-sm w-full [&_.cm-editor]:h-full [&_.cm-editor]:p-0 [&_.cm-scroller]:overflow-auto"
+                className="h-full text-sm w-full [&_.cm-editor]:h-full [&_.cm-editor]:p-0 [&_.cm-scroller]:overflow-auto"
                 basicSetup={{
                   lineNumbers: true,
                   highlightActiveLineGutter: true,
@@ -127,18 +117,8 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
                 }}
               />
             </div>
-          </TabsContent>
-          <TabsContent value="citations" className="flex-1 overflow-hidden min-h-0 min-w-0 m-0">
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              Citations coming soon
-            </div>
-          </TabsContent>
-          <TabsContent value="ai-agent" className="flex-1 overflow-hidden min-h-0 min-w-0 m-0">
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              AI Agent coming soon
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </ResizablePanel>
 
       {!isMobile && (

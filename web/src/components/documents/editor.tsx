@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
+import { useEffect, useState, useRef } from 'react';
+import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import { typst } from 'codemirror-lang-typst';
 import { $typst } from '@myriaddreamin/typst.ts';
@@ -13,6 +13,7 @@ import { useTypst } from '@/hooks/use-typst';
 import { processTypstSvg } from '@/utils/typst-svg-processor';
 import { DocumentPreview } from './document-preview';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { FormattingToolbar } from './formatting-toolbar';
 
 interface EditorProps {
   title: string;
@@ -29,6 +30,7 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
   const [error, setError] = useState<string | null>(null);
   const { isLoading, isReady, error: initError } = useTypst();
   const isMobile = useIsMobile();
+  const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   useEffect(() => {
     setContent(initialContent);
@@ -94,9 +96,12 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
     <ResizablePanelGroup className="flex-1 w-full h-full overflow-hidden">
       <ResizablePanel defaultSize={isMobile ? 100 : 50} minSize={30} className="min-w-0">
         <Tabs defaultValue="source" className="flex h-full flex-col w-full min-w-0 mb-0">
-          <div className="border-b bg-muted/50 px-4 h-12 shrink-0">
-            <div className="flex items-center justify-between h-full">
-              <h1 className="text-sm font-semibold truncate mr-4">{title}</h1>
+          <div className="border-b bg-muted/50 h-12 shrink-0">
+            <div className="flex items-center justify-between h-full px-4">
+              <div className="flex items-center gap-4">
+                <h1 className="text-sm font-semibold truncate">{title}</h1>
+                <FormattingToolbar editorView={editorRef.current?.view || null} />
+              </div>
               <TabsList variant="line" className="h-7">
                 <TabsTrigger value="source" className="text-xs px-2 h-6">Source</TabsTrigger>
                 <TabsTrigger value="citations" className="text-xs px-2 h-6">Citations</TabsTrigger>
@@ -107,6 +112,7 @@ export function Editor({ title, docType, initialContent, onSave, onExportPdf }: 
           <TabsContent value="source" className="flex-1 overflow-hidden min-h-0 min-w-0 m-0 p-0 w-full relative">
             <div className="absolute inset-0 w-full h-full mt-0 pt-0">
               <CodeMirror
+                ref={editorRef}
                 value={content}
                 height="100%"
                 theme={vscodeDark}

@@ -3,8 +3,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { getCachedWasm } from '@/lib/typst-cache';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type WorkerInMessage =
   | { type: 'init'; compilerUrl: string; rendererUrl: string }
   | { type: 'compile'; id: number; source: string };
@@ -41,10 +39,12 @@ const pendingCompiles = new Map<number, { resolve: (svg: string) => void; reject
 let nextCompileId = 0;
 
 function getOrCreateWorker(): Worker {
-  if (workerSingleton) return workerSingleton;
+  if (workerSingleton) {
+    console.debug('[typst-worker] Reusing existing worker singleton - no new Worker created.');
+    return workerSingleton;
+  }
 
-  // Next.js/Turbopack recognises `new URL(…, import.meta.url)` statically and
-  // bundles the worker file, making imports inside it work correctly.
+  console.info('[typst-worker] Creating new Worker (first load or page refresh).');
   workerSingleton = new Worker(
     new URL('../lib/typst-worker.ts', import.meta.url),
     { type: 'module' },
@@ -98,24 +98,45 @@ let readyCallbacks: Array<() => void> = [];
 let errorCallbacks: Array<(msg: string) => void> = [];
 
 async function initWorker(): Promise<void> {
-  if (workerReady) return;
-  if (workerError) throw new Error(workerError);
-  if (workerInitPromise) return workerInitPromise;
+  if (workerReady) {
+    console.debug('[typst-worker] initWorker() short-circuited: worker already ready.');
+    return;
+  }
+  if (workerError) {
+    console.warn('[typst-worker] initWorker() short-circuited: worker previously errored:', workerError);
+    throw new Error(workerError);
+  }
+  if (workerInitPromise) {
+    console.debug('[typst-worker] initWorker() short-circuited: init already in-flight, awaiting existing promise.');
+    return workerInitPromise;
+  }
+
+  console.info('[typst-worker] Starting worker init sequence – fetching WASM bundles...');
+  const initStart = performance.now();
 
   workerInitPromise = new Promise<void>((resolve, reject) => {
     const worker = getOrCreateWorker();
 
-    readyCallbacks.push(resolve);
-    errorCallbacks.push((msg) => reject(new Error(msg)));
+    readyCallbacks.push(() => {
+      console.info(`[typst-worker] Worker ready in ${(performance.now() - initStart).toFixed(0)} ms.`);
+      resolve();
+    });
+    errorCallbacks.push((msg) => {
+      console.error('[typst-worker] Worker init failed:', msg);
+      reject(new Error(msg));
+    });
 
-    // Fetch and cache both WASM files, then tell the worker where to load from.
+    // Fetch and cache WASM bytes (Cache API), then pass blob URLs to the worker.
+    console.log('[typst-worker] Resolving WASM URLs via cache...');
     Promise.all([
       getCachedWasm('compiler', '0.7.0-rc2', '/wasm/typst_ts_web_compiler_bg.wasm'),
       getCachedWasm('renderer', '0.7.0-rc2', '/wasm/typst_ts_renderer_bg.wasm'),
     ]).then(([compilerUrl, rendererUrl]) => {
+      console.log('[typst-worker] WASM URLs resolved - posting init message to worker.');
       const msg: WorkerInMessage = { type: 'init', compilerUrl, rendererUrl };
       worker.postMessage(msg);
     }).catch((err: unknown) => {
+      console.error('[typst-worker] Failed to resolve WASM URLs:', err);
       reject(err instanceof Error ? err : new Error(String(err)));
     });
   });
@@ -138,14 +159,20 @@ const compiler: TypstCompiler = {
   },
 };
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useTypst(): TypstState {
-  const [state, setState] = useState<TypstState>({
-    isLoading: !workerReady,
-    isReady: workerReady,
-    error: workerError,
-    compiler: workerReady ? compiler : null,
+  const [state, setState] = useState<TypstState>(() => {
+    if (workerReady) {
+      console.debug('[use-typst] Hook mounted – worker already ready, no loading state needed.');
+    } else {
+      console.debug('[use-typst] Hook mounted – worker not yet ready, entering loading state.');
+    }
+    return {
+      isLoading: !workerReady,
+      isReady: workerReady,
+      error: workerError,
+      compiler: workerReady ? compiler : null,
+    };
   });
 
   const mounted = useRef(true);

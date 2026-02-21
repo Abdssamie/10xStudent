@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useDocument, useDocumentContent, useUpdateDocumentContent } from '@/hooks/use-document';
@@ -36,12 +36,12 @@ export default function DocumentEditorPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  const handleContentChange = (newContent: string, unsaved: boolean) => {
+  const handleContentChange = useCallback((newContent: string, unsaved: boolean) => {
     contentRef.current = newContent;
     setHasUnsavedChanges(unsaved);
-  };
+  }, []);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     updateContent.mutate(contentRef.current, {
       onSuccess: () => {
         setHasUnsavedChanges(false);
@@ -49,7 +49,11 @@ export default function DocumentEditorPage() {
         toast.success('Document saved');
       },
     });
-  };
+  }, [updateContent]);
+
+  const handleExportPdf = useCallback(() => {
+    console.log('Export PDF clicked');
+  }, []);
 
   if (isLoadingDoc || isLoadingContent) {
     return (
@@ -83,9 +87,7 @@ export default function DocumentEditorPage() {
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={updateContent.isPending}
         onSave={handleSave}
-        onExportPdf={() => {
-          console.log('Export PDF clicked');
-        }}
+        onExportPdf={handleExportPdf}
       />
       <div className="flex-1 overflow-hidden">
         <Editor
@@ -94,9 +96,7 @@ export default function DocumentEditorPage() {
           docType={document.docType}
           initialContent={documentContent.content}
           onContentChange={handleContentChange}
-          onExportPdf={() => {
-            console.log('Export PDF clicked');
-          }}
+          onExportPdf={handleExportPdf}
         />
       </div>
     </div>

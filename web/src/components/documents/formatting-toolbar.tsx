@@ -12,10 +12,12 @@ interface FormattingToolbarProps {
   editorView: EditorView | null;
 }
 
-export function FormattingToolbar({ editorView }: FormattingToolbarProps) {
+import React from 'react';
+
+export const FormattingToolbar = React.memo(function FormattingToolbar({ editorView }: FormattingToolbarProps) {
   const handleFormat = (format: string) => {
     if (!editorView) return;
-    
+
     const button = toolbarButtons.find(b => b.id === format);
     if (button) {
       applyFormat(editorView, button.format);
@@ -75,4 +77,4 @@ export function FormattingToolbar({ editorView }: FormattingToolbarProps) {
       </div>
     </div>
   );
-}
+});

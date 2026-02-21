@@ -11,7 +11,9 @@ interface DocumentPreviewProps {
   onExportPdf: () => void;
 }
 
-export function DocumentPreview({
+import React from "react";
+
+export const DocumentPreview = React.memo(function DocumentPreview({
   svg,
   error,
   docType,
@@ -99,4 +101,4 @@ export function DocumentPreview({
       </TransformWrapper>
     </div>
   );
-}
+});

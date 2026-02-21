@@ -3,6 +3,7 @@
 import { Download, ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import React from "react";
 
 interface DocumentPreviewProps {
   svg: string;
@@ -10,8 +11,6 @@ interface DocumentPreviewProps {
   docType: string;
   onExportPdf: () => void;
 }
-
-import React from "react";
 
 export const DocumentPreview = React.memo(function DocumentPreview({
   svg,

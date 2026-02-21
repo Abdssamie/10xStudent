@@ -7,12 +7,12 @@ import { toolbarButtons } from '@/lib/editor/toolbar-config';
 import { EditorView } from '@codemirror/view';
 import { applyFormat } from '@/lib/editor/actions';
 import { undo, redo } from '@/lib/editor/history-actions';
+import React from 'react';
 
 interface FormattingToolbarProps {
   editorView: EditorView | null;
 }
 
-import React from 'react';
 
 export const FormattingToolbar = React.memo(function FormattingToolbar({ editorView }: FormattingToolbarProps) {
   const handleFormat = (format: string) => {

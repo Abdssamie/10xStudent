@@ -33,29 +33,26 @@ const browserCachingFetcher = async (
     const isFont = /\.(ttf|otf|woff2|ttc)$/i.test(url) || url.includes('fonts.gstatic.com');
 
     if (!isFont) {
+        console.debug("Faced non font asset: ", url)
         // Let Typst packages and other assets bypass the cache logic
         return fetch(input, init);
     }
 
-    // Rewrite font URLs to use our local public folder avoiding external requests
-    // Typst.ts by default fetches from unpkg.com/@myriaddreamin/...
-    if (url.includes('@myriaddreamin/typst.ts') || url.includes('unpkg.com')) {
-        const filename = url.split('/').pop();
-        if (filename) {
-            url = `/fonts/typst/${filename}`;
-        }
-    }
+    url = new URL(url, self.location.origin).toString();
 
+    console.debug("Faced font asset: ", url)
     // 2. Open the browser's Cache Storage
     const cache = await caches.open(CACHE_NAME);
 
     // 3. Check if we already have this font cached
     const cachedResponse = await cache.match(url);
     if (cachedResponse) {
+        console.log("Cache hit for public/fonts")
         return cachedResponse;
     }
 
     // 4. Cache Miss: Fetch from your public folder or remote URL
+    console.log("Cache miss for public/fonts")
     const response = await fetch(url, init);
 
     // 5. Store a copy in the cache for next time
@@ -79,10 +76,10 @@ self.onmessage = async (event: MessageEvent) => {
             $typst.setCompilerInitOptions({
                 getModule: () => msg.compilerUrl,
                 beforeBuild: [
-                    // Fetch standard Typst text fonts (LibertinusSerif, NewCM, DejaVu)
                     preloadFontAssets({
                         fetcher: browserCachingFetcher as unknown as typeof fetch,
                         assets: ['text'],
+                        assetUrlPrefix: '/fonts/typst/'
                     }),
                 ],
             });

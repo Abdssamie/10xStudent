@@ -15,6 +15,13 @@ const DEFAULT_USER_VALUES = {
 
 export const webhooksRouter = new Hono();
 
+webhooksRouter.all("/clerk", (c) => {
+  if (c.req.method === "GET") {
+    return c.json({ message: "Clerk webhook endpoint. Send POST requests only." });
+  }
+  return c.json({ error: "Method not allowed" }, 405);
+});
+
 webhooksRouter.post("/clerk", async (c) => {
   let event;
   try {

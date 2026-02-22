@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: api/Dockerfile
     restart: always
+    command: sh -c "bun run db:push && bun run start"
     ports:
       - "3001:3001"
     environment:

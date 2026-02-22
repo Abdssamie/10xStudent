@@ -2,6 +2,8 @@
 
 import { BillingSection } from '@/components/settings/billing-section';
 
+export const dynamic = 'force-dynamic';
+
 export default function BillingPage() {
   return (
     <div className="space-y-6">

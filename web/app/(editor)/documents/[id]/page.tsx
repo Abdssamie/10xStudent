@@ -84,8 +84,6 @@ export default function DocumentEditorPage() {
     <div className="h-screen w-full flex flex-col overflow-hidden">
       <EditorMenuBar
         title={document.title}
-        hasUnsavedChanges={hasUnsavedChanges}
-        isSaving={updateContent.isPending}
         onSave={handleSave}
         onExportPdf={handleExportPdf}
       />

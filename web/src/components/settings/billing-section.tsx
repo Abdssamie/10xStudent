@@ -2,23 +2,21 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUserSettings } from '@/hooks/use-user-settings';
-import { Coins, Mail } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Coins, Clock } from 'lucide-react';
 
 export function BillingSection() {
-  const { settings, isLoading } = useUserSettings();
+  const { settings, isLoading: isLoadingSettings } = useUserSettings();
 
-  if (isLoading) {
+  if (isLoadingSettings) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Credits</CardTitle>
-          <CardDescription>Manage your credits</CardDescription>
+          <CardTitle>Current Balance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse space-y-4">
-            <div className="h-20 w-full bg-muted rounded" />
-            <div className="h-10 w-32 bg-muted rounded" />
+          <div className="animate-pulse space-y-3">
+            <div className="h-8 bg-muted rounded w-32"></div>
+            <div className="h-4 bg-muted rounded w-24"></div>
           </div>
         </CardContent>
       </Card>
@@ -26,46 +24,57 @@ export function BillingSection() {
   }
 
   const credits = settings?.credits ?? 0;
-  const usedThisMonth = settings?.credits ? 10000 - settings.credits : 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Credits</CardTitle>
-        <CardDescription>Manage your credits</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
-          <div className="p-3 rounded-full bg-primary/10">
-            <Coins className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{credits.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">Credits remaining</p>
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{usedThisMonth.toLocaleString()}</span> credits used this month
-          </p>
-        </div>
-
-        <div className="pt-4 border-t space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Need more credits?</p>
-              <p className="text-sm text-muted-foreground">Contact us for billing inquiries</p>
+    <div className="space-y-8">
+      {/* Current Balance */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Current Balance</CardTitle>
+          <CardDescription>Your available credits for research and generation.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Coins className="h-6 w-6 text-primary" />
             </div>
-            <Button variant="outline" asChild>
-              <a href="mailto:support@10xstudent.com">
-                <Mail className="mr-2 h-4 w-4" />
-                Contact Us
-              </a>
-            </Button>
+            <div>
+              <p className="text-3xl font-bold">{credits.toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">credits remaining</p>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Free Credits Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Free Credits</CardTitle>
+          <CardDescription>How to get more credits</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 rounded-lg bg-muted">
+            <p className="font-medium">New users receive 10,000 free credits on sign-up.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Coming Soon */}
+      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+        <CardHeader className="flex flex-row items-center gap-3">
+          <Clock className="h-5 w-5 text-amber-500" />
+          <div>
+            <CardTitle className="text-lg">Coming Soon</CardTitle>
+            <CardDescription>Purchase more credits</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            We&apos;re working on adding the ability to purchase more credits. 
+            For now, enjoy your free credits!
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

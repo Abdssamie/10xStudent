@@ -36,6 +36,20 @@
       "when": 1771563123261,
       "tag": "0004_aberrant_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771694498700,
+      "tag": "0005_worthless_bulldozer",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771725501185,
+      "tag": "0006_common_fantastic_four",
+      "breakpoints": true
     }
   ]
 }

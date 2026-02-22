@@ -45,7 +45,7 @@ services:
       - default
 
   postgres:
-    image: pgvector/pg17-trixie
+    image: pgvector/pgvector:pg17-trixie
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

@@ -1,4 +1,4 @@
-import { type SourceType } from "@shared/src/source-type";
+import { type SourceType } from "@shared/source-type";
 
 /**
  * Automatically detect source type from URL or file extension.

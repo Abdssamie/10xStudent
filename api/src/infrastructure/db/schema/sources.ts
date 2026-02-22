@@ -8,7 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { vector } from "drizzle-orm/pg-core";
 import { documents } from "./documents";
-import { type SourceType } from "@shared/src/source-type";
+import { type SourceType } from "@shared/source-type";
 
 // Source metadata type
 export type SourceMetadata = {

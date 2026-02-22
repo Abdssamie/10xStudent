@@ -23,20 +23,22 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./src/*"
+        "src/*"
       ],
       "@shared": [
-        "../shared"
+        "src/lib/shared/index.ts"
+      ],
+      "@shared/src": [
+        "src/lib/shared/index.ts"
       ],
       "@shared/*": [
-        "../shared/*"
+        "src/lib/shared/*"
       ]
     }
   },
   "include": [
     "src/**/*",
-    "tests/**/*",
-    "../shared/**/*"
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",

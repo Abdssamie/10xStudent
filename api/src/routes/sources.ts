@@ -9,7 +9,7 @@ import {
   createSourceSchema,
   sourceResponseSchema,
   updateSourceSchema,
-} from "@shared/src/api/sources";
+} from "@shared/api/sources";
 
 import { schema, eq, and } from "@/infrastructure/db";
 import type { NewSource } from "@/infrastructure/db/schema/sources";

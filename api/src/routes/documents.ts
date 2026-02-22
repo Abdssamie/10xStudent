@@ -12,7 +12,7 @@ import {
   documentContentResponseSchema,
   updateDocumentContentBodySchema,
   bibliographyResponseSchema,
-} from "@shared/src";
+} from "@shared";
 
 const { documents } = schema;
 

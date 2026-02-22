@@ -5,7 +5,7 @@ import {
   userSettingsResponseSchema,
   updateUserPreferencesRequestSchema,
   userPreferencesSchema,
-} from "@shared/src/api/user";
+} from "@shared/api/user";
 
 import { schema } from "@/infrastructure/db";
 import { NotFoundError } from "@/infrastructure/errors";

@@ -1,6 +1,6 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 
-import { chatRequestBodySchema, chatMessageResponseSchema } from "@shared/src/api/chat";
+import { chatRequestBodySchema, chatMessageResponseSchema } from "@shared/api/chat";
 
 import { schema, eq, and } from "@/infrastructure/db";
 import { NotFoundError } from "@/infrastructure/errors";

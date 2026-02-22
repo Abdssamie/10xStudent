@@ -5,7 +5,7 @@
 
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 
-import { createCitationBodySchema, citationResponseSchema } from "@shared/src/api/citations";
+import { createCitationBodySchema, citationResponseSchema } from "@shared/api/citations";
 
 import { schema, eq, and, sql } from "@/infrastructure/db";
 import { NotFoundError } from "@/infrastructure/errors";

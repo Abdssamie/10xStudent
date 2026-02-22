@@ -5,7 +5,7 @@
 
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 
-import { assetResponseSchema } from "@shared/src/api/assets";
+import { assetResponseSchema } from "@shared/api/assets";
 
 import { schema, eq, and } from "@/infrastructure/db";
 import { NotFoundError, ValidationError } from "@/infrastructure/errors";

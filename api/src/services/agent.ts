@@ -3,7 +3,7 @@ import { geminiText } from "@tanstack/ai-gemini";
 import { serverTools } from "@/services/tools/server";
 import { insertContentDef, replaceContentDef } from "@/services/tools/schemas";
 import { env } from "@/config/env";
-import { ChatMessage } from "@shared/src";
+import { ChatMessage } from "@shared";
 import { DB, schema } from "@/infrastructure/db";
 import { CreditManager } from "./credit-manager";
 import { logger } from "@/utils/logger";

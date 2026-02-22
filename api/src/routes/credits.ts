@@ -9,7 +9,7 @@ import { desc, sql } from "drizzle-orm";
 import {
   creditsBalanceResponseSchema,
   creditsHistoryResponseSchema,
-} from "@shared/src/api/credits";
+} from "@shared/api/credits";
 
 import { schema, eq } from "@/infrastructure/db";
 import { NotFoundError } from "@/infrastructure/errors";

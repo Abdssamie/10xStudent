@@ -1,9 +1,0 @@
-{
-  "name": "10xstudent",
-  "private": true,
-  "workspaces": [
-    "shared",
-    "api", 
-    "web"
-  ]
-}

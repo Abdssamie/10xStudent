@@ -32,10 +32,11 @@ export function wrapWithFormat(
     case 'underline':
       return `#underline[${text}]`;
     
-    case 'heading':
+    case 'heading': {
       const level = options?.level || 1;
       const prefix = '='.repeat(level);
       return `${prefix} ${text}`;
+    }
     
     case 'bullet-list':
       return `- ${text}`;
@@ -71,10 +72,11 @@ export function getEmptyFormat(
     case 'underline':
       return { text: '#underline[]', cursorOffset: 11 };
     
-    case 'heading':
+    case 'heading': {
       const level = options?.level || 1;
       const prefix = '='.repeat(level);
       return { text: `${prefix} `, cursorOffset: prefix.length + 1 };
+    }
     
     case 'bullet-list':
       return { text: '- ', cursorOffset: 2 };

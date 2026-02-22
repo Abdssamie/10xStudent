@@ -30,13 +30,12 @@ services:
       # Monitoring
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-0.1}
       # Config
       - CORS_ORIGINS=${CORS_ORIGINS}
       - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
       - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
       - RATE_LIMIT_AI_MAX_REQUESTS=${RATE_LIMIT_AI_MAX_REQUESTS}
-    env_file:
-      - .env.production
     depends_on:
       - postgres
       - redis

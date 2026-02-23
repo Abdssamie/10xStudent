@@ -28,7 +28,7 @@ export const DocumentPreview = React.memo(function DocumentPreview({
         </div>
       </div>
       <div className="flex-1 bg-slate-100 dark:bg-slate-900 overflow-auto">
-        <div className="flex justify-center p-8 min-w-full min-h-full">
+        <div className="flex justify-center p-8 min-w-full">
           {error ? (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 w-full max-w-2xl">
               <h3 className="mb-2 font-semibold text-destructive">

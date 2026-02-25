@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { getCachedWasm } from '@/lib/typst-cache';
+import { getCachedWasm, revokeWasmBlobUrls } from '@/lib/typst-cache';
 
 export interface PageInfo {
   count: number;
@@ -72,6 +72,11 @@ function getOrCreateWorker(): Worker {
     new URL('../lib/typst-worker.ts', import.meta.url),
     { type: 'module' },
   );
+
+  // Clean up on page unload to prevent memory leaks
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', terminateWorker);
+  }
 
   workerSingleton.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
     const msg = event.data;
@@ -148,6 +153,25 @@ function getOrCreateWorker(): Worker {
 
 let readyCallbacks: Array<() => void> = [];
 let errorCallbacks: Array<(msg: string) => void> = [];
+
+/**
+ * Terminates the worker and cleans up resources.
+ * Called on page unload to prevent memory leaks.
+ */
+function terminateWorker(): void {
+  if (workerSingleton) {
+    console.log('[typst-worker] Terminating worker and cleaning up resources');
+    workerSingleton.terminate();
+    workerSingleton = null;
+    workerReady = false;
+    workerError = null;
+    workerInitPromise = null;
+    revokeWasmBlobUrls();
+    pendingCompiles.clear();
+    pendingVectors.clear();
+    pendingPages.clear();
+  }
+}
 
 async function initWorker(): Promise<void> {
   if (workerReady) {

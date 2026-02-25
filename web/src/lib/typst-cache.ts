@@ -1,6 +1,9 @@
 const CACHE_NAME = 'typst-wasm-v1';
 const WASM_VERSION = '0.7.0-rc2';
 
+// Track blob URLs for cleanup
+const activeBlobUrls = new Set<string>();
+
 // Versioned key busts the cache entry when WASM_VERSION changes.
 function cacheKey(url: string, version: string) {
   return `${url}?v=${version}`;
@@ -30,7 +33,9 @@ export async function getCachedWasm(
       console.log(`${tag} CACHE HIT - serving ${type} WASM from Cache API (${(blob.size / 1024).toFixed(1)} KB). No network request.`);
       // Set correct MIME type so the worker can use WebAssembly.instantiateStreaming.
       const wasmBlob = new Blob([blob], { type: 'application/wasm' });
-      return URL.createObjectURL(wasmBlob);
+      const blobUrl = URL.createObjectURL(wasmBlob);
+      activeBlobUrls.add(blobUrl);
+      return blobUrl;
     }
 
     console.log(`${tag} CACHE MISS - fetching fresh ${type} WASM from "${url}". Will be cached for next load.`);
@@ -51,7 +56,9 @@ export async function getCachedWasm(
     console.log(`${tag} Stored in cache. Next load will be a cache hit.`);
 
     const wasmBlob = new Blob([bytes], { type: 'application/wasm' });
-    return URL.createObjectURL(wasmBlob);
+    const blobUrl = URL.createObjectURL(wasmBlob);
+    activeBlobUrls.add(blobUrl);
+    return blobUrl;
 
   } catch (error) {
     console.error(`${tag} Cache strategy failed - falling back to direct URL "${url}":`, error);
@@ -63,6 +70,18 @@ export async function clearWasmCache(): Promise<void> {
   console.log('[typst-cache] Clearing WASM cache:', CACHE_NAME);
   await caches.delete(CACHE_NAME);
   console.log('[typst-cache] Cache cleared.');
+}
+
+/**
+ * Revokes all active blob URLs created by getCachedWasm.
+ * Call this when terminating the worker to prevent memory leaks.
+ */
+export function revokeWasmBlobUrls(): void {
+  console.log(`[typst-cache] Revoking ${activeBlobUrls.size} blob URLs`);
+  for (const url of activeBlobUrls) {
+    URL.revokeObjectURL(url);
+  }
+  activeBlobUrls.clear();
 }
 
 export { WASM_VERSION };

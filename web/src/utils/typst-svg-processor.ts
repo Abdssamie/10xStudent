@@ -33,6 +33,18 @@ export interface ProcessTypstSvgOptions {
 let parseSvg: SVGSVGElement | null = null;
 let parseGroup: SVGGElement | null = null;
 
+/**
+ * Cleans up the reusable SVG elements used for transform parsing.
+ * Call this when the module is no longer needed to prevent memory leaks.
+ */
+export function cleanupSvgParser(): void {
+  if (parseSvg && parseSvg.parentNode) {
+    parseSvg.parentNode.removeChild(parseSvg);
+  }
+  parseSvg = null;
+  parseGroup = null;
+}
+
 function getTransformValues(transform: string): { x: number; y: number } {
   if (!parseSvg) {
     parseSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");

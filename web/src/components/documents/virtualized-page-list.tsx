@@ -34,6 +34,8 @@ const PageSlot = memo(function PageSlot({
   const [isVisible, setIsVisible] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
+  // Track the pixelPerPt used for the current render to detect zoom changes
+  const renderedAtPptRef = useRef<number | null>(null);
 
   // Display dimensions (CSS pixels)
   const displayWidth = widthPt * pixelPerPt;
@@ -61,7 +63,15 @@ const PageSlot = memo(function PageSlot({
     return () => observer.disconnect();
   }, []);
 
-  // Render when visible and not yet rendered
+  // Reset rendered state when pixelPerPt changes (zoom)
+  useEffect(() => {
+    if (renderedAtPptRef.current !== null && renderedAtPptRef.current !== pixelPerPt) {
+      setIsRendered(false);
+      renderedAtPptRef.current = null;
+    }
+  }, [pixelPerPt]);
+
+  // Render when visible and not yet rendered (or needs re-render due to zoom)
   useEffect(() => {
     if (!isVisible || isRendered || isRendering) return;
 
@@ -72,6 +82,7 @@ const PageSlot = memo(function PageSlot({
         const ctx = canvasRef.current?.getContext("2d");
         if (ctx && result.imageData) {
           ctx.putImageData(result.imageData, 0, 0);
+          renderedAtPptRef.current = pixelPerPt;
           setIsRendered(true);
           onRendered?.(pageIndex);
         }

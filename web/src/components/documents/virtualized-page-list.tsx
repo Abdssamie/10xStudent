@@ -56,7 +56,7 @@ const PageSlot = memo(function PageSlot({
           setIsVisible(entry.isIntersecting);
         }
       },
-      { rootMargin: "900px" } // Buffer for smooth scrolling
+      { rootMargin: "400px" } // Reduced buffer for better memory usage while maintaining smooth scrolling
     );
 
     observer.observe(canvas);
@@ -80,8 +80,11 @@ const PageSlot = memo(function PageSlot({
       try {
         const result = await compiler.renderPage(pageIndex, pixelPerPt);
         const ctx = canvasRef.current?.getContext("2d");
-        if (ctx && result.imageData) {
-          ctx.putImageData(result.imageData, 0, 0);
+        if (ctx && result.bitmap) {
+          // Use drawImage with ImageBitmap (zero-copy from worker)
+          ctx.drawImage(result.bitmap, 0, 0);
+          // Close the bitmap to free GPU memory
+          result.bitmap.close();
           renderedAtPptRef.current = pixelPerPt;
           setIsRendered(true);
           onRendered?.(pageIndex);

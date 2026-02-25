@@ -3,6 +3,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { getCachedWasm, revokeWasmBlobUrls } from '@/lib/typst-cache';
 
+// Conditional logging - only log in development
+const DEBUG = process.env.NODE_ENV !== 'production';
+const log = {
+  debug: DEBUG ? console.debug.bind(console) : () => {},
+  info: DEBUG ? console.info.bind(console) : () => {},
+  log: DEBUG ? console.log.bind(console) : () => {},
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+};
+
 export interface PageInfo {
   count: number;
   heights: number[];
@@ -11,7 +21,7 @@ export interface PageInfo {
 
 /** Result of rendering a single page */
 export interface PageRenderResult {
-  imageData: ImageData;
+  bitmap: ImageBitmap;
   width: number;
   height: number;
 }
@@ -28,7 +38,7 @@ type WorkerOutMessage =
   | { type: 'result'; id: number; svg: string }
   | { type: 'compile-error'; id: number; message: string }
   | { type: 'vector-result'; id: number; pageCount: number; pageHeights: number[]; pageWidths: number[] }
-  | { type: 'page-result'; id: number; imageData: ImageData; width: number; height: number };
+  | { type: 'page-result'; id: number; bitmap: ImageBitmap; width: number; height: number };
 
 export interface TypstCompiler {
   /** Compile Typst source to SVG. Returns the SVG string or throws on error. */
@@ -63,11 +73,11 @@ let nextCompileId = 0;
 
 function getOrCreateWorker(): Worker {
   if (workerSingleton) {
-    console.debug('[typst-worker] Reusing existing worker singleton - no new Worker created.');
+    log.debug('[typst-worker] Reusing existing worker singleton - no new Worker created.');
     return workerSingleton;
   }
 
-  console.info('[typst-worker] Creating new Worker (first load or page refresh).');
+  log.info('[typst-worker] Creating new Worker (first load or page refresh).');
   workerSingleton = new Worker(
     new URL('../lib/typst-worker.ts', import.meta.url),
     { type: 'module' },
@@ -136,7 +146,7 @@ function getOrCreateWorker(): Worker {
       const pending = pendingPages.get(msg.id);
       if (pending) {
         pendingPages.delete(msg.id);
-        pending.resolve({ imageData: msg.imageData, width: msg.width, height: msg.height });
+        pending.resolve({ bitmap: msg.bitmap, width: msg.width, height: msg.height });
       }
       return;
     }
@@ -160,7 +170,7 @@ let errorCallbacks: Array<(msg: string) => void> = [];
  */
 function terminateWorker(): void {
   if (workerSingleton) {
-    console.log('[typst-worker] Terminating worker and cleaning up resources');
+    log.log('[typst-worker] Terminating worker and cleaning up resources');
     workerSingleton.terminate();
     workerSingleton = null;
     workerReady = false;
@@ -175,44 +185,44 @@ function terminateWorker(): void {
 
 async function initWorker(): Promise<void> {
   if (workerReady) {
-    console.debug('[typst-worker] initWorker() short-circuited: worker already ready.');
+    log.debug('[typst-worker] initWorker() short-circuited: worker already ready.');
     return;
   }
   if (workerError) {
-    console.warn('[typst-worker] initWorker() short-circuited: worker previously errored:', workerError);
+    log.warn('[typst-worker] initWorker() short-circuited: worker previously errored:', workerError);
     throw new Error(workerError);
   }
   if (workerInitPromise) {
-    console.debug('[typst-worker] initWorker() short-circuited: init already in-flight, awaiting existing promise.');
+    log.debug('[typst-worker] initWorker() short-circuited: init already in-flight, awaiting existing promise.');
     return workerInitPromise;
   }
 
-  console.info('[typst-worker] Starting worker init sequence – fetching WASM bundles...');
+  log.info('[typst-worker] Starting worker init sequence – fetching WASM bundles...');
   const initStart = performance.now();
 
   workerInitPromise = new Promise<void>((resolve, reject) => {
     const worker = getOrCreateWorker();
 
     readyCallbacks.push(() => {
-      console.info(`[typst-worker] Worker ready in ${(performance.now() - initStart).toFixed(0)} ms.`);
+      log.info(`[typst-worker] Worker ready in ${(performance.now() - initStart).toFixed(0)} ms.`);
       resolve();
     });
     errorCallbacks.push((msg) => {
-      console.error('[typst-worker] Worker init failed:', msg);
+      log.error('[typst-worker] Worker init failed:', msg);
       reject(new Error(msg));
     });
 
     // Fetch and cache WASM bytes (Cache API), then pass blob URLs to the worker.
-    console.log('[typst-worker] Resolving WASM URLs via cache...');
+    log.log('[typst-worker] Resolving WASM URLs via cache...');
     Promise.all([
       getCachedWasm('compiler', '0.7.0-rc2', '/wasm/typst_ts_web_compiler_bg.wasm'),
       getCachedWasm('renderer', '0.7.0-rc2', '/wasm/typst_ts_renderer_bg.wasm'),
     ]).then(([compilerUrl, rendererUrl]) => {
-      console.log('[typst-worker] WASM URLs resolved - posting init message to worker.');
+      log.log('[typst-worker] WASM URLs resolved - posting init message to worker.');
       const msg: WorkerInMessage = { type: 'init', compilerUrl, rendererUrl };
       worker.postMessage(msg);
     }).catch((err: unknown) => {
-      console.error('[typst-worker] Failed to resolve WASM URLs:', err);
+      log.error('[typst-worker] Failed to resolve WASM URLs:', err);
       reject(err instanceof Error ? err : new Error(String(err)));
     });
   });
@@ -263,9 +273,9 @@ const compiler: TypstCompiler = {
 export function useTypst(): TypstState {
   const [state, setState] = useState<TypstState>(() => {
     if (workerReady) {
-      console.debug('[use-typst] Hook mounted – worker already ready, no loading state needed.');
+      log.debug('[use-typst] Hook mounted – worker already ready, no loading state needed.');
     } else {
-      console.debug('[use-typst] Hook mounted – worker not yet ready, entering loading state.');
+      log.debug('[use-typst] Hook mounted – worker not yet ready, entering loading state.');
     }
     return {
       isLoading: !workerReady,

@@ -17,12 +17,22 @@
  *   { type: 'result'; id: number; svg: string }
  *   { type: 'compile-error'; id: number; message: string }
  *   { type: 'vector-result'; id: number; pageCount: number; pageHeights: number[]; pageWidths: number[] }
- *   { type: 'page-result'; id: number; imageData: ImageData; width: number; height: number }
+ *   { type: 'page-result'; id: number; bitmap: ImageBitmap; width: number; height: number }
  */
 
 import { $typst } from '@myriaddreamin/typst.ts';
 import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
 import type { TypstRenderer, RenderSession } from '@myriaddreamin/typst.ts/dist/esm/renderer.mjs';
+
+// Conditional logging - only log in development
+const DEBUG = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+const log = {
+    debug: DEBUG ? console.debug.bind(console) : () => {},
+    info: DEBUG ? console.info.bind(console) : () => {},
+    log: DEBUG ? console.log.bind(console) : () => {},
+    warn: console.warn.bind(console), // Always show warnings
+    error: console.error.bind(console), // Always show errors
+};
 
 interface PageInfoItem {
     pageOffset: number;
@@ -91,7 +101,7 @@ self.onmessage = async (event: MessageEvent) => {
         | { type: 'render-page'; id: number; pageOffset: number; pixelPerPt: number };
 
     if (msg.type === 'init') {
-        console.debug('[typst-worker] Received init message...');
+        log.debug('[typst-worker] Received init message...');
         const wasmStart = performance.now();
         try {
             $typst.setCompilerInitOptions({
@@ -108,11 +118,11 @@ self.onmessage = async (event: MessageEvent) => {
 
             // Warm-up
             await $typst.svg({ mainContent: '= Init' });
-            console.info(`[typst-worker] WASM ready in ${(performance.now() - wasmStart).toFixed(0)}ms`);
+            log.info(`[typst-worker] WASM ready in ${(performance.now() - wasmStart).toFixed(0)}ms`);
             initialized = true;
             self.postMessage({ type: 'ready' });
         } catch (err) {
-            console.error('[typst-worker] WASM init failed:', err);
+            log.error('[typst-worker] WASM init failed:', err);
             self.postMessage({
                 type: 'init-error',
                 message: err instanceof Error ? err.message : String(err),
@@ -156,7 +166,7 @@ self.onmessage = async (event: MessageEvent) => {
                 if (!vectorData) {
                     throw new Error('Vector compilation returned undefined');
                 }
-                console.log(`[typst-worker] vector() done: ${vectorData.byteLength} bytes in ${(performance.now() - compileStart).toFixed(0)}ms`);
+                log.log(`[typst-worker] vector() done: ${vectorData.byteLength} bytes in ${(performance.now() - compileStart).toFixed(0)}ms`);
 
                 // Get renderer (lazy init)
                 if (!cachedRenderer) {
@@ -175,7 +185,7 @@ self.onmessage = async (event: MessageEvent) => {
                     widths: pages.map(p => p.width),
                 };
 
-                console.log(`[typst-worker] compile-vector complete: ${cachedPageInfo.count} pages`);
+                log.log(`[typst-worker] compile-vector complete: ${cachedPageInfo.count} pages`);
                 self.postMessage({
                     type: 'vector-result',
                     id: msg.id,
@@ -184,7 +194,7 @@ self.onmessage = async (event: MessageEvent) => {
                     pageWidths: cachedPageInfo.widths,
                 });
             } catch (err) {
-                console.error(`[typst-worker] compile-vector ERROR:`, err);
+                log.error(`[typst-worker] compile-vector ERROR:`, err);
                 self.postMessage({
                     type: 'compile-error',
                     id: msg.id,
@@ -238,16 +248,17 @@ self.onmessage = async (event: MessageEvent) => {
                     backgroundColor: '#ffffff',
                 });
 
-                const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+                // Use transferToImageBitmap for zero-copy transfer (much faster than getImageData)
+                const bitmap = offscreen.transferToImageBitmap();
 
-                console.log(`[typst-worker] renderPage ${pageOffset}: ${canvasWidth}x${canvasHeight} in ${(performance.now() - renderStart).toFixed(0)}ms`);
+                log.log(`[typst-worker] renderPage ${pageOffset}: ${canvasWidth}x${canvasHeight} in ${(performance.now() - renderStart).toFixed(0)}ms`);
 
                 self.postMessage(
-                    { type: 'page-result', id, imageData, width: canvasWidth, height: canvasHeight },
-                    { transfer: [imageData.data.buffer as ArrayBuffer] }
+                    { type: 'page-result', id, bitmap, width: canvasWidth, height: canvasHeight },
+                    { transfer: [bitmap] }
                 );
             } catch (err) {
-                console.error(`[typst-worker] render-page ERROR:`, err);
+                log.error(`[typst-worker] render-page ERROR:`, err);
                 self.postMessage({
                     type: 'compile-error',
                     id,

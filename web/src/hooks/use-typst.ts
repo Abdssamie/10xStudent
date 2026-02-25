@@ -3,19 +3,40 @@
 import { useEffect, useState, useRef } from 'react';
 import { getCachedWasm } from '@/lib/typst-cache';
 
+export interface PageInfo {
+  count: number;
+  heights: number[];
+  widths: number[];
+}
+
+/** Result of rendering a single page */
+export interface PageRenderResult {
+  imageData: ImageData;
+  width: number;
+  height: number;
+}
+
 type WorkerInMessage =
   | { type: 'init'; compilerUrl: string; rendererUrl: string }
-  | { type: 'compile'; id: number; source: string };
+  | { type: 'compile'; id: number; source: string }
+  | { type: 'compile-vector'; id: number; source: string }
+  | { type: 'render-page'; id: number; pageOffset: number; pixelPerPt: number };
 
 type WorkerOutMessage =
   | { type: 'ready' }
   | { type: 'init-error'; message: string }
   | { type: 'result'; id: number; svg: string }
-  | { type: 'compile-error'; id: number; message: string };
+  | { type: 'compile-error'; id: number; message: string }
+  | { type: 'vector-result'; id: number; pageCount: number; pageHeights: number[]; pageWidths: number[] }
+  | { type: 'page-result'; id: number; imageData: ImageData; width: number; height: number };
 
 export interface TypstCompiler {
   /** Compile Typst source to SVG. Returns the SVG string or throws on error. */
   compile(source: string): Promise<string>;
+  /** Compile to vector format for viewport rendering. Returns page info. */
+  compileVector(source: string): Promise<PageInfo>;
+  /** Render a single page from cached vector data. */
+  renderPage(pageOffset: number, pixelPerPt: number): Promise<PageRenderResult>;
 }
 
 interface TypstState {
@@ -36,6 +57,8 @@ let workerInitPromise: Promise<void> | null = null;
 
 // Pending compile calls waiting for a result keyed by request id.
 const pendingCompiles = new Map<number, { resolve: (svg: string) => void; reject: (err: Error) => void }>();
+const pendingVectors = new Map<number, { resolve: (info: PageInfo) => void; reject: (err: Error) => void }>();
+const pendingPages = new Map<number, { resolve: (result: PageRenderResult) => void; reject: (err: Error) => void }>();
 let nextCompileId = 0;
 
 function getOrCreateWorker(): Worker {
@@ -77,11 +100,40 @@ function getOrCreateWorker(): Worker {
     }
 
     if (msg.type === 'compile-error') {
-      const pending = pendingCompiles.get(msg.id);
-      if (pending) {
+      const pendingCompile = pendingCompiles.get(msg.id);
+      if (pendingCompile) {
         pendingCompiles.delete(msg.id);
-        pending.reject(new Error(msg.message));
+        pendingCompile.reject(new Error(msg.message));
       }
+      const pendingVector = pendingVectors.get(msg.id);
+      if (pendingVector) {
+        pendingVectors.delete(msg.id);
+        pendingVector.reject(new Error(msg.message));
+      }
+      const pendingPage = pendingPages.get(msg.id);
+      if (pendingPage) {
+        pendingPages.delete(msg.id);
+        pendingPage.reject(new Error(msg.message));
+      }
+      return;
+    }
+
+    if (msg.type === 'vector-result') {
+      const pending = pendingVectors.get(msg.id);
+      if (pending) {
+        pendingVectors.delete(msg.id);
+        pending.resolve({ count: msg.pageCount, heights: msg.pageHeights, widths: msg.pageWidths });
+      }
+      return;
+    }
+
+    if (msg.type === 'page-result') {
+      const pending = pendingPages.get(msg.id);
+      if (pending) {
+        pendingPages.delete(msg.id);
+        pending.resolve({ imageData: msg.imageData, width: msg.width, height: msg.height });
+      }
+      return;
     }
   };
 
@@ -154,6 +206,30 @@ const compiler: TypstCompiler = {
       const id = nextCompileId++;
       pendingCompiles.set(id, { resolve, reject });
       const msg: WorkerInMessage = { type: 'compile', id, source };
+      workerSingleton.postMessage(msg);
+    });
+  },
+  compileVector(source: string): Promise<PageInfo> {
+    return new Promise((resolve, reject) => {
+      if (!workerSingleton || !workerReady) {
+        reject(new Error('Typst compiler is not ready'));
+        return;
+      }
+      const id = nextCompileId++;
+      pendingVectors.set(id, { resolve, reject });
+      const msg: WorkerInMessage = { type: 'compile-vector', id, source };
+      workerSingleton.postMessage(msg);
+    });
+  },
+  renderPage(pageOffset: number, pixelPerPt: number): Promise<PageRenderResult> {
+    return new Promise((resolve, reject) => {
+      if (!workerSingleton || !workerReady) {
+        reject(new Error('Typst compiler is not ready'));
+        return;
+      }
+      const id = nextCompileId++;
+      pendingPages.set(id, { resolve, reject });
+      const msg: WorkerInMessage = { type: 'render-page', id, pageOffset, pixelPerPt };
       workerSingleton.postMessage(msg);
     });
   },

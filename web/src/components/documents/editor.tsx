@@ -20,8 +20,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { useTypst } from "@/hooks/use-typst";
-import { processTypstSvg } from "@/utils/typst-svg-processor";
+import { useTypst, type PageInfo } from "@/hooks/use-typst";
 import { DocumentPreview } from "./document-preview";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { FormattingToolbar } from "./formatting-toolbar";
@@ -43,9 +42,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   ref,
 ) {
   const [content, setContent] = useState(initialContent);
-  const [svg, setSvg] = useState<string>("");
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { isLoading, isReady, error: initError, compiler } = useTypst();
+  const {
+    isLoading,
+    isReady,
+    error: initError,
+    compiler
+  } = useTypst();
+
   const isMobile = useIsMobile();
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const compileAbortRef = useRef<AbortController | null>(null);
@@ -68,7 +73,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   const compile = useDebouncedCallback(
     async (source: string, paperType: string) => {
-      if (!isReady || !compiler) return;
+      if (!isReady || !compiler) {
+        console.log('[Editor] compile: skipped (not ready)');
+        return;
+      }
 
       // Cancel previous compilation
       if (compileAbortRef.current) {
@@ -82,15 +90,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         if (paperType !== "auto") {
           compileContent = `#set page(paper: "${paperType}")\n` + source;
         }
-        // compile() routes through postMessage to the Web Worker
-        const result = await compiler.compile(compileContent);
 
+        console.log(`[Editor] compile START: ${compileContent.length} chars, paperType=${paperType}`);
+
+        // Compile to vector format - this caches in worker and returns page info
+        // The VirtualizedPageList will render pages on-demand using renderPage()
+        const info = await compiler.compileVector(compileContent);
+        
         if (compileAbortRef.current.signal.aborted) return;
-
-        const processedSvg = processTypstSvg(result);
-        setSvg(processedSvg);
+        console.log(`[Editor] compileVector done: ${info.count} pages`);
+        setPageInfo(info);
       } catch (err) {
         if (compileAbortRef.current?.signal.aborted) return;
+        console.error('[Editor] compile ERROR:', err);
         setError(err instanceof Error ? err.message : "Compilation error");
       }
     },
@@ -181,7 +193,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={50} minSize={15} className="min-w-0">
             <DocumentPreview
-              svg={svg}
+              compiler={compiler}
+              pageInfo={pageInfo}
               error={error}
               docType={docType}
               onExportPdf={onExportPdf}

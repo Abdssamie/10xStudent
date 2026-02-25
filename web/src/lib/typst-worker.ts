@@ -47,21 +47,93 @@ let cachedRenderer: TypstRenderer | null = null;
 let cachedSession: RenderSession | null = null;
 let cachedPageInfo: { count: number; heights: number[]; widths: number[] } | null = null;
 
-// Simple sequential processing - no concurrency allowed
-let isBusy = false;
-const pendingWork: Array<() => Promise<void>> = [];
+// Compilation version - increments on each compile to invalidate render cache
+let compileVersion = 0;
 
-async function enqueue(work: () => Promise<void>) {
-    pendingWork.push(work);
-    if (!isBusy) {
-        isBusy = true;
-        while (pendingWork.length > 0) {
-            const job = pendingWork.shift()!;
-            await job();
-        }
-        isBusy = false;
-    }
+// ─── LRU Cache for rendered pages ───────────────────────────────────────────
+const MAX_CACHE_SIZE = 15; // Keep ~15 pages in cache
+const pageCache = new Map<string, { bitmap: ImageBitmap; version: number }>();
+
+function getCacheKey(pageOffset: number, pixelPerPt: number): string {
+    return `${pageOffset}-${pixelPerPt.toFixed(2)}`;
 }
+
+function getCachedPage(pageOffset: number, pixelPerPt: number): ImageBitmap | null {
+    const key = getCacheKey(pageOffset, pixelPerPt);
+    const cached = pageCache.get(key);
+    if (cached && cached.version === compileVersion) {
+        // Move to end (most recently used)
+        pageCache.delete(key);
+        pageCache.set(key, cached);
+        return cached.bitmap;
+    }
+    // Invalidate stale cache entry
+    if (cached) {
+        cached.bitmap.close();
+        pageCache.delete(key);
+    }
+    return null;
+}
+
+function setCachedPage(pageOffset: number, pixelPerPt: number, bitmap: ImageBitmap): void {
+    const key = getCacheKey(pageOffset, pixelPerPt);
+    
+    // Evict oldest entries if cache is full
+    while (pageCache.size >= MAX_CACHE_SIZE) {
+        const oldestKey = pageCache.keys().next().value;
+        if (oldestKey) {
+            const old = pageCache.get(oldestKey);
+            old?.bitmap.close();
+            pageCache.delete(oldestKey);
+        }
+    }
+    
+    pageCache.set(key, { bitmap, version: compileVersion });
+}
+
+function clearPageCache(): void {
+    for (const entry of pageCache.values()) {
+        entry.bitmap.close();
+    }
+    pageCache.clear();
+}
+
+// ─── OffscreenCanvas Pool ───────────────────────────────────────────────────
+const canvasPool = new Map<string, OffscreenCanvas[]>();
+const MAX_POOL_SIZE = 3; // Max canvases per size
+
+function getCanvasSizeKey(width: number, height: number): string {
+    return `${width}x${height}`;
+}
+
+function acquireCanvas(width: number, height: number): OffscreenCanvas {
+    const key = getCanvasSizeKey(width, height);
+    const pool = canvasPool.get(key);
+    if (pool && pool.length > 0) {
+        return pool.pop()!;
+    }
+    return new OffscreenCanvas(width, height);
+}
+
+function releaseCanvas(canvas: OffscreenCanvas): void {
+    const key = getCanvasSizeKey(canvas.width, canvas.height);
+    let pool = canvasPool.get(key);
+    if (!pool) {
+        pool = [];
+        canvasPool.set(key, pool);
+    }
+    if (pool.length < MAX_POOL_SIZE) {
+        // Clear the canvas before returning to pool
+        const ctx = canvas.getContext('2d');
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        pool.push(canvas);
+    }
+    // If pool is full, canvas is garbage collected
+}
+
+// ─── Compilation Queue (sequential for compile, parallel for render) ────────
+let isCompiling = false;
+let pendingCompile: (() => Promise<void>) | null = null;
 
 const CACHE_NAME = 'typst-font-cache-v1';
 
@@ -155,12 +227,15 @@ self.onmessage = async (event: MessageEvent) => {
             return;
         }
 
-        // Clear any pending renders - they're for old data
-        pendingWork.length = 0;
-
-        await enqueue(async () => {
+        // Queue compilation (only one at a time)
+        const doCompile = async () => {
+            isCompiling = true;
             const compileStart = performance.now();
             try {
+                // Clear page cache on recompile
+                clearPageCache();
+                compileVersion++;
+                
                 // Compile to vector
                 const vectorData = await $typst.vector({ mainContent: msg.source });
                 if (!vectorData) {
@@ -174,7 +249,6 @@ self.onmessage = async (event: MessageEvent) => {
                 }
 
                 // Create a NEW persistent session (replaces old one)
-                // Note: createModule exists on TypstRendererDriver but not in interface
                 cachedSession = await (cachedRenderer as any).createModule(vectorData);
 
                 // Extract page info from the persistent session
@@ -200,8 +274,23 @@ self.onmessage = async (event: MessageEvent) => {
                     id: msg.id,
                     message: err instanceof Error ? err.message : String(err),
                 });
+            } finally {
+                isCompiling = false;
+                // Process next pending compile if any
+                if (pendingCompile) {
+                    const next = pendingCompile;
+                    pendingCompile = null;
+                    next();
+                }
             }
-        });
+        };
+
+        if (isCompiling) {
+            // Replace pending compile (only latest matters)
+            pendingCompile = doCompile;
+        } else {
+            doCompile();
+        }
         return;
     }
 
@@ -216,55 +305,90 @@ self.onmessage = async (event: MessageEvent) => {
         }
 
         const { id, pageOffset, pixelPerPt } = msg;
+        
+        // Check cache first
+        const cachedBitmap = getCachedPage(pageOffset, pixelPerPt);
+        if (cachedBitmap) {
+            // Create a copy since we can't transfer the cached bitmap
+            const canvas = acquireCanvas(cachedBitmap.width, cachedBitmap.height);
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(cachedBitmap, 0, 0);
+                const bitmap = canvas.transferToImageBitmap();
+                log.log(`[typst-worker] renderPage ${pageOffset}: CACHE HIT`);
+                self.postMessage(
+                    { type: 'page-result', id, bitmap, width: cachedBitmap.width, height: cachedBitmap.height },
+                    { transfer: [bitmap] }
+                );
+            }
+            releaseCanvas(canvas);
+            return;
+        }
 
-        await enqueue(async () => {
-            if (!cachedSession || !cachedPageInfo) return;
+        // Render in parallel (no queue for render-page)
+        const pageWidth = cachedPageInfo.widths[pageOffset];
+        const pageHeight = cachedPageInfo.heights[pageOffset];
 
-            const pageWidth = cachedPageInfo.widths[pageOffset];
-            const pageHeight = cachedPageInfo.heights[pageOffset];
+        if (pageWidth === undefined || pageHeight === undefined) {
+            self.postMessage({ type: 'compile-error', id, message: `Invalid page offset: ${pageOffset}` });
+            return;
+        }
 
-            if (pageWidth === undefined || pageHeight === undefined) {
-                self.postMessage({ type: 'compile-error', id, message: `Invalid page offset: ${pageOffset}` });
+        const canvasWidth = Math.ceil(pageWidth * pixelPerPt);
+        const canvasHeight = Math.ceil(pageHeight * pixelPerPt);
+        const currentVersion = compileVersion;
+
+        const renderStart = performance.now();
+        try {
+            const offscreen = acquireCanvas(canvasWidth, canvasHeight);
+            const ctx = offscreen.getContext('2d');
+
+            if (!ctx) {
+                throw new Error('Failed to get 2d context');
+            }
+
+            // Render using the PERSISTENT session
+            await cachedSession.renderCanvas({
+                canvas: ctx as unknown as CanvasRenderingContext2D,
+                pageOffset,
+                pixelPerPt,
+                backgroundColor: '#ffffff',
+            });
+
+            // Check if compilation changed during render
+            if (currentVersion !== compileVersion) {
+                log.log(`[typst-worker] renderPage ${pageOffset}: discarded (stale version)`);
+                releaseCanvas(offscreen);
                 return;
             }
 
-            const canvasWidth = Math.ceil(pageWidth * pixelPerPt);
-            const canvasHeight = Math.ceil(pageHeight * pixelPerPt);
-
-            const renderStart = performance.now();
-            try {
-                const offscreen = new OffscreenCanvas(canvasWidth, canvasHeight);
-                const ctx = offscreen.getContext('2d');
-
-                if (!ctx) {
-                    throw new Error('Failed to get 2d context');
-                }
-
-                // Render using the PERSISTENT session - no create/destroy
-                await cachedSession.renderCanvas({
-                    canvas: ctx as unknown as CanvasRenderingContext2D,
-                    pageOffset,
-                    pixelPerPt,
-                    backgroundColor: '#ffffff',
-                });
-
-                // Use transferToImageBitmap for zero-copy transfer (much faster than getImageData)
-                const bitmap = offscreen.transferToImageBitmap();
-
-                log.log(`[typst-worker] renderPage ${pageOffset}: ${canvasWidth}x${canvasHeight} in ${(performance.now() - renderStart).toFixed(0)}ms`);
-
-                self.postMessage(
-                    { type: 'page-result', id, bitmap, width: canvasWidth, height: canvasHeight },
-                    { transfer: [bitmap] }
-                );
-            } catch (err) {
-                log.error(`[typst-worker] render-page ERROR:`, err);
-                self.postMessage({
-                    type: 'compile-error',
-                    id,
-                    message: err instanceof Error ? err.message : String(err),
-                });
+            // Create bitmap for transfer and cache
+            const bitmap = offscreen.transferToImageBitmap();
+            
+            // Cache a copy of the bitmap
+            const cacheCanvas = acquireCanvas(canvasWidth, canvasHeight);
+            const cacheCtx = cacheCanvas.getContext('2d');
+            if (cacheCtx) {
+                cacheCtx.drawImage(bitmap, 0, 0);
+                const cacheBitmap = cacheCanvas.transferToImageBitmap();
+                setCachedPage(pageOffset, pixelPerPt, cacheBitmap);
             }
-        });
+            releaseCanvas(cacheCanvas);
+            releaseCanvas(offscreen);
+
+            log.log(`[typst-worker] renderPage ${pageOffset}: ${canvasWidth}x${canvasHeight} in ${(performance.now() - renderStart).toFixed(0)}ms`);
+
+            self.postMessage(
+                { type: 'page-result', id, bitmap, width: canvasWidth, height: canvasHeight },
+                { transfer: [bitmap] }
+            );
+        } catch (err) {
+            log.error(`[typst-worker] render-page ERROR:`, err);
+            self.postMessage({
+                type: 'compile-error',
+                id,
+                message: err instanceof Error ? err.message : String(err),
+            });
+        }
     }
 };

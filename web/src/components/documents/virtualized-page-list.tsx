@@ -54,7 +54,7 @@ const PageSlot = memo(function PageSlot({
           setIsVisible(entry.isIntersecting);
         }
       },
-      { rootMargin: "200px" } // Buffer for smooth scrolling
+      { rootMargin: "900px" } // Buffer for smooth scrolling
     );
 
     observer.observe(canvas);
@@ -125,6 +125,8 @@ interface VirtualizedPageListProps {
   compiler: TypstCompiler;
   pageInfo: PageInfo;
   pixelPerPt: number;
+  /** Increment this to force re-render of all pages */
+  version?: number;
 }
 
 /**
@@ -135,8 +137,14 @@ export function VirtualizedPageList({
   compiler,
   pageInfo,
   pixelPerPt,
+  version = 0,
 }: VirtualizedPageListProps) {
   const [renderedCount, setRenderedCount] = useState(0);
+
+  // Reset rendered count when version changes (new compilation)
+  useEffect(() => {
+    setRenderedCount(0);
+  }, [version]);
 
   const handlePageRendered = useCallback((pageIndex: number) => {
     setRenderedCount((prev) => Math.max(prev, pageIndex + 1));
@@ -155,7 +163,7 @@ export function VirtualizedPageList({
     >
       {Array.from({ length: pageInfo.count }, (_, i) => (
         <PageSlot
-          key={i}
+          key={`${version}-${i}`}
           pageIndex={i}
           widthPt={pageInfo.widths[i] ?? 595.28} // Default A4 width
           heightPt={pageInfo.heights[i] ?? 841.89} // Default A4 height

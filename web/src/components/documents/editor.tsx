@@ -43,6 +43,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 ) {
   const [content, setContent] = useState(initialContent);
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+  const [compileVersion, setCompileVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const {
     isLoading,
@@ -100,6 +101,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         if (compileAbortRef.current.signal.aborted) return;
         console.log(`[Editor] compileVector done: ${info.count} pages`);
         setPageInfo(info);
+        setCompileVersion(v => v + 1); // Trigger re-render of pages
       } catch (err) {
         if (compileAbortRef.current?.signal.aborted) return;
         console.error('[Editor] compile ERROR:', err);
@@ -195,6 +197,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             <DocumentPreview
               compiler={compiler}
               pageInfo={pageInfo}
+              compileVersion={compileVersion}
               error={error}
               docType={docType}
               onExportPdf={onExportPdf}

@@ -7,7 +7,7 @@ import type { TypstCompiler, PageInfo } from "@/hooks/use-typst";
 import { VirtualizedPageList } from "./virtualized-page-list";
 
 /** Pixels per point - Typst uses points (pt), DOM uses pixels */
-const PIXEL_PER_PT = 1.5;
+const PIXEL_PER_PT = 2.0;
 
 interface DocumentPreviewProps {
   compiler: TypstCompiler | null;
@@ -15,6 +15,8 @@ interface DocumentPreviewProps {
   error: string | null;
   docType: string;
   onExportPdf: () => void;
+  /** Increment to force re-render pages after recompilation */
+  compileVersion?: number;
 }
 
 export const DocumentPreview = React.memo(function DocumentPreview({
@@ -23,6 +25,7 @@ export const DocumentPreview = React.memo(function DocumentPreview({
   error,
   docType,
   onExportPdf,
+  compileVersion = 0,
 }: DocumentPreviewProps) {
   return (
     <div className="flex h-full flex-col">
@@ -58,6 +61,7 @@ export const DocumentPreview = React.memo(function DocumentPreview({
             compiler={compiler}
             pageInfo={pageInfo}
             pixelPerPt={PIXEL_PER_PT}
+            version={compileVersion}
           />
         ) : (
           <div className="flex h-64 items-center justify-center">

@@ -23,6 +23,7 @@
 import { $typst } from '@myriaddreamin/typst.ts';
 import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
 import type { TypstRenderer, RenderSession } from '@myriaddreamin/typst.ts/dist/esm/renderer.mjs';
+import { kObject } from '@myriaddreamin/typst.ts/dist/esm/internal.types.mjs';
 
 // Conditional logging - only log in development
 const DEBUG = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
@@ -96,6 +97,27 @@ function clearPageCache(): void {
         entry.bitmap.close();
     }
     pageCache.clear();
+}
+
+/**
+ * Dispose the current render session and release WASM memory.
+ * Must be called before creating a new session or on errors.
+ */
+function disposeSession(): void {
+    if (cachedSession) {
+        try {
+            // Access the raw WASM RenderSession via kObject symbol and call free()
+            const rawSession = (cachedSession as any)[kObject];
+            if (rawSession && typeof rawSession.free === 'function') {
+                rawSession.free();
+                log.log('[typst-worker] Session WASM memory freed');
+            }
+        } catch (e) {
+            log.warn('[typst-worker] Failed to free session:', e);
+        }
+        cachedSession = null;
+    }
+    cachedPageInfo = null;
 }
 
 // ─── OffscreenCanvas Pool ───────────────────────────────────────────────────
@@ -232,7 +254,8 @@ self.onmessage = async (event: MessageEvent) => {
             isCompiling = true;
             const compileStart = performance.now();
             try {
-                // Clear page cache on recompile
+                // Dispose old session and clear cache BEFORE starting new compile
+                disposeSession();
                 clearPageCache();
                 compileVersion++;
                 
@@ -269,6 +292,9 @@ self.onmessage = async (event: MessageEvent) => {
                 });
             } catch (err) {
                 log.error(`[typst-worker] compile-vector ERROR:`, err);
+                // Clean up on error to free memory
+                disposeSession();
+                clearPageCache();
                 self.postMessage({
                     type: 'compile-error',
                     id: msg.id,

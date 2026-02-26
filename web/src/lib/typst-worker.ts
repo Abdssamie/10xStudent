@@ -25,6 +25,14 @@ import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/esm/options.init
 import type { TypstRenderer, RenderSession } from '@myriaddreamin/typst.ts/dist/esm/renderer.mjs';
 import { kObject } from '@myriaddreamin/typst.ts/dist/esm/internal.types.mjs';
 
+// Type augmentation for kObject access
+interface WithKObject<T> {
+    [kObject]?: T;
+}
+
+type RenderSessionWithKObject = RenderSession & WithKObject<{ free?: () => void }>;
+type TypstRendererWithKObject = TypstRenderer & WithKObject<{ free?: () => void }>;
+
 // Conditional logging - only log in development
 const DEBUG = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
 const log = {
@@ -51,8 +59,12 @@ let cachedPageInfo: { count: number; heights: number[]; widths: number[] } | nul
 // Compilation version - increments on each compile to invalidate render cache
 let compileVersion = 0;
 
+// Renderer lifecycle tracking
+let rendererCompileCount = 0;
+const MAX_COMPILES_BEFORE_RENDERER_RESET = 10;
+
 // ─── LRU Cache for rendered pages ───────────────────────────────────────────
-const MAX_CACHE_SIZE = 15; // Keep ~15 pages in cache
+const MAX_CACHE_SIZE = 5; // Keep ~5 pages in cache (reduced from 15 to save memory)
 const pageCache = new Map<string, { bitmap: ImageBitmap; version: number }>();
 
 function getCacheKey(pageOffset: number, pixelPerPt: number): string {
@@ -93,10 +105,18 @@ function setCachedPage(pageOffset: number, pixelPerPt: number, bitmap: ImageBitm
 }
 
 function clearPageCache(): void {
-    for (const entry of pageCache.values()) {
-        entry.bitmap.close();
+    log.log(`[typst-worker] Clearing page cache (${pageCache.size} entries)`);
+    let closedCount = 0;
+    for (const [key, entry] of pageCache.entries()) {
+        try {
+            entry.bitmap.close();
+            closedCount++;
+        } catch (e) {
+            log.warn(`[typst-worker] Failed to close bitmap for ${key}:`, e);
+        }
     }
     pageCache.clear();
+    log.log(`[typst-worker] Page cache cleared (${closedCount} bitmaps closed)`);
 }
 
 /**
@@ -107,10 +127,19 @@ function disposeSession(): void {
     if (cachedSession) {
         try {
             // Access the raw WASM RenderSession via kObject symbol and call free()
-            const rawSession = (cachedSession as any)[kObject];
-            if (rawSession && typeof rawSession.free === 'function') {
-                rawSession.free();
-                log.log('[typst-worker] Session WASM memory freed');
+            const sessionWithKObject = cachedSession as RenderSessionWithKObject;
+            
+            // Runtime check: verify kObject symbol exists on the object
+            if (!(kObject in sessionWithKObject)) {
+                log.warn('[typst-worker] kObject symbol not found on session, skipping WASM free');
+            } else {
+                const rawSession = sessionWithKObject[kObject];
+                if (rawSession && typeof rawSession.free === 'function') {
+                    rawSession.free();
+                    log.log('[typst-worker] Session WASM memory freed');
+                } else {
+                    log.warn('[typst-worker] Session kObject exists but free() method not found');
+                }
             }
         } catch (e) {
             log.warn('[typst-worker] Failed to free session:', e);
@@ -118,11 +147,38 @@ function disposeSession(): void {
         cachedSession = null;
     }
     cachedPageInfo = null;
+    
+    // Dispose renderer after N compilations to free WASM memory
+    rendererCompileCount++;
+    if (rendererCompileCount >= MAX_COMPILES_BEFORE_RENDERER_RESET) {
+        if (cachedRenderer) {
+            try {
+                const rendererWithKObject = cachedRenderer as TypstRendererWithKObject;
+                
+                // Runtime check: verify kObject symbol exists on the object
+                if (!(kObject in rendererWithKObject)) {
+                    log.warn('[typst-worker] kObject symbol not found on renderer, skipping WASM free');
+                } else {
+                    const rawRenderer = rendererWithKObject[kObject];
+                    if (rawRenderer && typeof rawRenderer.free === 'function') {
+                        rawRenderer.free();
+                        log.log(`[typst-worker] Renderer WASM memory freed after ${rendererCompileCount} compilations`);
+                    } else {
+                        log.warn('[typst-worker] Renderer kObject exists but free() method not found');
+                    }
+                }
+            } catch (e) {
+                log.warn('[typst-worker] Failed to free renderer:', e);
+            }
+            cachedRenderer = null;
+            rendererCompileCount = 0;
+        }
+    }
 }
 
 // ─── OffscreenCanvas Pool ───────────────────────────────────────────────────
 const canvasPool = new Map<string, OffscreenCanvas[]>();
-const MAX_POOL_SIZE = 3; // Max canvases per size
+const MAX_POOL_SIZE = 1; // Max canvases per size (reduced from 3 to save memory)
 
 function getCanvasSizeKey(width: number, height: number): string {
     return `${width}x${height}`;
@@ -151,6 +207,20 @@ function releaseCanvas(canvas: OffscreenCanvas): void {
         pool.push(canvas);
     }
     // If pool is full, canvas is garbage collected
+}
+
+function clearCanvasPool(): void {
+    log.log(`[typst-worker] Clearing canvas pool (${canvasPool.size} size groups)`);
+    for (const [key, pool] of canvasPool.entries()) {
+        for (const canvas of pool) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+    }
+    canvasPool.clear();
+    log.log('[typst-worker] Canvas pool cleared');
 }
 
 // ─── Compilation Queue (sequential for compile, parallel for render) ────────
@@ -257,6 +327,7 @@ self.onmessage = async (event: MessageEvent) => {
                 // Dispose old session and clear cache BEFORE starting new compile
                 disposeSession();
                 clearPageCache();
+                clearCanvasPool();
                 compileVersion++;
                 
                 // Compile to vector

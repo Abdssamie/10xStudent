@@ -47,6 +47,8 @@ export interface TypstCompiler {
   compileVector(source: string): Promise<PageInfo>;
   /** Render a single page from cached vector data. */
   renderPage(pageOffset: number, pixelPerPt: number): Promise<PageRenderResult>;
+  /** Reset worker to free WASM memory. */
+  resetMemory(): Promise<void>;
 }
 
 interface TypstState {
@@ -70,6 +72,10 @@ const pendingCompiles = new Map<number, { resolve: (svg: string) => void; reject
 const pendingVectors = new Map<number, { resolve: (info: PageInfo) => void; reject: (err: Error) => void }>();
 const pendingPages = new Map<number, { resolve: (result: PageRenderResult) => void; reject: (err: Error) => void }>();
 let nextCompileId = 0;
+
+// Worker restart tracking
+let compilationCount = 0;
+const MAX_COMPILATIONS_BEFORE_RESTART = 50;
 
 function getOrCreateWorker(): Worker {
   if (workerSingleton) {
@@ -249,6 +255,28 @@ const compiler: TypstCompiler = {
         reject(new Error('Typst compiler is not ready'));
         return;
       }
+      
+      // Check if we need to restart worker to free memory
+      compilationCount++;
+      if (compilationCount >= MAX_COMPILATIONS_BEFORE_RESTART) {
+        log.info(`[typst-worker] Restarting worker after ${compilationCount} compilations to free memory`);
+        terminateWorker();
+        compilationCount = 0;
+        
+        // Reinitialize worker
+        initWorker().then(() => {
+          if (!workerSingleton || !workerReady) {
+            reject(new Error('Failed to restart worker'));
+            return;
+          }
+          const id = nextCompileId++;
+          pendingVectors.set(id, { resolve, reject });
+          const msg: WorkerInMessage = { type: 'compile-vector', id, source };
+          workerSingleton.postMessage(msg);
+        }).catch(reject);
+        return;
+      }
+      
       const id = nextCompileId++;
       pendingVectors.set(id, { resolve, reject });
       const msg: WorkerInMessage = { type: 'compile-vector', id, source };
@@ -265,6 +293,23 @@ const compiler: TypstCompiler = {
       pendingPages.set(id, { resolve, reject });
       const msg: WorkerInMessage = { type: 'render-page', id, pageOffset, pixelPerPt };
       workerSingleton.postMessage(msg);
+    });
+  },
+  resetMemory(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      log.info('[typst-worker] Manual memory reset requested');
+      terminateWorker();
+      compilationCount = 0;
+      
+      initWorker()
+        .then(() => {
+          log.info('[typst-worker] Worker restarted successfully');
+          resolve();
+        })
+        .catch((err) => {
+          log.error('[typst-worker] Failed to restart worker:', err);
+          reject(err);
+        });
     });
   },
 };

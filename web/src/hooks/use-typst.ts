@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { getCachedWasm, revokeWasmBlobUrls } from '@/lib/typst-cache';
+import type { TypstDiagnostic } from '@/lib/typst-worker';
 
 // Conditional logging - only log in development
 const DEBUG = process.env.NODE_ENV !== 'production';
@@ -12,6 +13,21 @@ const log = {
   warn: console.warn.bind(console),
   error: console.error.bind(console),
 };
+
+export type { TypstDiagnostic };
+
+/**
+ * Error thrown when Typst compilation fails. Carries structured diagnostics
+ * so the UI can display them in a human-readable way instead of a raw string.
+ */
+export class TypstCompileError extends Error {
+  readonly diagnostics: TypstDiagnostic[];
+  constructor(message: string, diagnostics: TypstDiagnostic[]) {
+    super(message);
+    this.name = 'TypstCompileError';
+    this.diagnostics = diagnostics;
+  }
+}
 
 export interface PageInfo {
   count: number;
@@ -36,7 +52,7 @@ type WorkerOutMessage =
   | { type: 'ready' }
   | { type: 'init-error'; message: string }
   | { type: 'result'; id: number; svg: string }
-  | { type: 'compile-error'; id: number; message: string }
+  | { type: 'compile-error'; id: number; message: string; diagnostics: TypstDiagnostic[] }
   | { type: 'vector-result'; id: number; pageCount: number; pageHeights: number[]; pageWidths: number[] }
   | { type: 'page-result'; id: number; bitmap: ImageBitmap; width: number; height: number };
 
@@ -121,20 +137,21 @@ function getOrCreateWorker(): Worker {
     }
 
     if (msg.type === 'compile-error') {
+      const err = new TypstCompileError(msg.message, msg.diagnostics ?? []);
       const pendingCompile = pendingCompiles.get(msg.id);
       if (pendingCompile) {
         pendingCompiles.delete(msg.id);
-        pendingCompile.reject(new Error(msg.message));
+        pendingCompile.reject(err);
       }
       const pendingVector = pendingVectors.get(msg.id);
       if (pendingVector) {
         pendingVectors.delete(msg.id);
-        pendingVector.reject(new Error(msg.message));
+        pendingVector.reject(err);
       }
       const pendingPage = pendingPages.get(msg.id);
       if (pendingPage) {
         pendingPages.delete(msg.id);
-        pendingPage.reject(new Error(msg.message));
+        pendingPage.reject(err);
       }
       return;
     }

@@ -20,7 +20,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { useTypst, type PageInfo } from "@/hooks/use-typst";
+import { useTypst, type PageInfo, TypstCompileError, type TypstDiagnostic } from "@/hooks/use-typst";
 import { DocumentPreview } from "./document-preview";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { FormattingToolbar } from "./formatting-toolbar";
@@ -44,7 +44,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const [content, setContent] = useState(initialContent);
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [compileVersion, setCompileVersion] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<TypstDiagnostic[]>([]);
   const {
     isLoading,
     isReady,
@@ -86,7 +86,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       compileAbortRef.current = new AbortController();
 
       try {
-        setError(null);
+        setDiagnostics([]);
         let compileContent = source;
         if (paperType !== "auto") {
           compileContent = `#set page(paper: "${paperType}")\n` + source;
@@ -104,8 +104,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         setCompileVersion(v => v + 1); // Trigger re-render of pages
       } catch (err) {
         if (compileAbortRef.current?.signal.aborted) return;
-        console.error('[Editor] compile ERROR:', err);
-        setError(err instanceof Error ? err.message : "Compilation error");
+        if (err instanceof TypstCompileError) {
+          // User-facing compile errors — shown in the preview panel, not the console
+          setDiagnostics(err.diagnostics);
+        } else {
+          // Unexpected internal errors — worth logging
+          console.error('[Editor] compile ERROR:', err);
+          setDiagnostics([{ severity: 'error', message: err instanceof Error ? err.message : 'Compilation error', hints: [] }]);
+        }
       }
     },
     500,
@@ -198,7 +204,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               compiler={compiler}
               pageInfo={pageInfo}
               compileVersion={compileVersion}
-              error={error}
+              diagnostics={diagnostics}
               docType={docType}
               onExportPdf={onExportPdf}
             />

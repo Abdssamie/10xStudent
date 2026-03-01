@@ -3,7 +3,7 @@
 import { Download, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import type { TypstCompiler, PageInfo } from "@/hooks/use-typst";
+import type { TypstCompiler, PageInfo, TypstDiagnostic } from "@/hooks/use-typst";
 import { VirtualizedPageList } from "./virtualized-page-list";
 
 /**
@@ -38,7 +38,8 @@ function nextZoomStep(current: number, direction: "in" | "out"): number {
 interface DocumentPreviewProps {
   compiler: TypstCompiler | null;
   pageInfo: PageInfo | null;
-  error: string | null;
+  /** Structured Typst compilation diagnostics (errors/warnings). */
+  diagnostics: TypstDiagnostic[];
   docType: string;
   onExportPdf: () => void;
   /** Increment to force re-render pages after recompilation */
@@ -48,7 +49,7 @@ interface DocumentPreviewProps {
 export const DocumentPreview = React.memo(function DocumentPreview({
   compiler,
   pageInfo,
-  error,
+  diagnostics,
   docType,
   onExportPdf,
   compileVersion = 0,
@@ -148,16 +149,49 @@ export const DocumentPreview = React.memo(function DocumentPreview({
         ref={scrollContainerRef}
         className="flex-1 bg-slate-100 dark:bg-slate-900 overflow-auto"
       >
-        {error ? (
-          <div className="p-8">
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 w-full max-w-2xl mx-auto">
-              <h3 className="mb-2 font-semibold text-destructive">
-                Compilation Error
-              </h3>
-              <pre className="whitespace-pre-wrap text-sm text-destructive/90">
-                {error}
-              </pre>
-            </div>
+        {diagnostics.length > 0 ? (
+          <div className="p-6 space-y-3 w-full max-w-2xl mx-auto">
+            {diagnostics.map((diag, i) => (
+              <div
+                key={i}
+                className={
+                  diag.severity === "error"
+                    ? "rounded-lg border border-destructive/40 bg-destructive/10 p-4"
+                    : "rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-4"
+                }
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className={
+                      "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded " +
+                      (diag.severity === "error"
+                        ? "bg-destructive/20 text-destructive"
+                        : "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400")
+                    }
+                  >
+                    {diag.severity}
+                  </span>
+                </div>
+                <p className={
+                  "text-sm font-mono " +
+                  (diag.severity === "error"
+                    ? "text-destructive"
+                    : "text-yellow-800 dark:text-yellow-300")
+                }>
+                  {diag.message}
+                </p>
+                {diag.hints.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {diag.hints.map((hint, j) => (
+                      <li key={j} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <span className="mt-0.5 shrink-0">hint:</span>
+                        <span className="font-mono">{hint}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
           </div>
         ) : compiler && pageInfo ? (
           <VirtualizedPageList

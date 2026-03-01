@@ -15,10 +15,76 @@
  *   { type: 'ready' }
  *   { type: 'init-error'; message: string }
  *   { type: 'result'; id: number; svg: string }
- *   { type: 'compile-error'; id: number; message: string }
+ *   { type: 'compile-error'; id: number; message: string; diagnostics: TypstDiagnostic[] }
  *   { type: 'vector-result'; id: number; pageCount: number; pageHeights: number[]; pageWidths: number[] }
  *   { type: 'page-result'; id: number; bitmap: ImageBitmap; width: number; height: number }
  */
+
+/** A parsed Typst compiler diagnostic (error or warning). */
+export interface TypstDiagnostic {
+    severity: 'error' | 'warning' | 'info';
+    message: string;
+    hints: string[];
+}
+
+/**
+ * Parse the Rust Debug-formatted diagnostic string from the Typst WASM compiler.
+ *
+ * The raw string looks like:
+ *   [SourceDiagnostic { severity: Error, span: Span(123), message: "unknown variable: foo", trace: [], hints: [] }]
+ *
+ * Returns an empty array when the string doesn't match the expected format.
+ */
+function parseTypstDiagnostics(raw: string): TypstDiagnostic[] {
+    const diagnostics: TypstDiagnostic[] = [];
+
+    // Match each SourceDiagnostic { ... } block
+    const diagPattern = /SourceDiagnostic\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = diagPattern.exec(raw)) !== null) {
+        const body = match[1] ?? '';
+
+        // Extract severity
+        const severityMatch = /severity:\s*(\w+)/.exec(body);
+        const rawSeverity = severityMatch?.[1]?.toLowerCase() ?? 'error';
+        const severity: TypstDiagnostic['severity'] =
+            rawSeverity === 'warning' ? 'warning'
+            : rawSeverity === 'info' ? 'info'
+            : 'error';
+
+        // Extract message (quoted string)
+        const messageMatch = /message:\s*"((?:[^"\\]|\\.)*)"/.exec(body);
+        const message = messageMatch?.[1]?.replace(/\\"/g, '"') ?? raw.trim();
+
+        // Extract hints array — hints: ["hint one", "hint two"]
+        const hintsMatch = /hints:\s*\[([^\]]*)\]/.exec(body);
+        const hints: string[] = [];
+        if (hintsMatch?.[1]) {
+            const hintPattern = /"((?:[^"\\]|\\.)*)"/g;
+            let hintMatch: RegExpExecArray | null;
+            while ((hintMatch = hintPattern.exec(hintsMatch[1])) !== null) {
+                hints.push(hintMatch[1]?.replace(/\\"/g, '"') ?? '');
+            }
+        }
+
+        diagnostics.push({ severity, message, hints });
+    }
+
+    return diagnostics;
+}
+
+/**
+ * Convert an error thrown by the Typst WASM into a diagnostic list.
+ * Falls back to a single synthetic diagnostic when the string isn't parseable.
+ */
+function errorToDiagnostics(err: unknown): TypstDiagnostic[] {
+    const raw = err instanceof Error ? err.message : String(err);
+    const parsed = parseTypstDiagnostics(raw);
+    if (parsed.length > 0) return parsed;
+    // Fallback: wrap the raw message as a single error
+    return [{ severity: 'error', message: raw, hints: [] }];
+}
 
 import { $typst } from '@myriaddreamin/typst.ts';
 import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
@@ -297,17 +363,19 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (msg.type === 'compile') {
         if (!initialized) {
-            self.postMessage({ type: 'compile-error', id: msg.id, message: 'Compiler not ready' });
+            self.postMessage({ type: 'compile-error', id: msg.id, message: 'Compiler not ready', diagnostics: [{ severity: 'error', message: 'Compiler not ready', hints: [] }] });
             return;
         }
         try {
             const svg = await $typst.svg({ mainContent: msg.source });
             self.postMessage({ type: 'result', id: msg.id, svg });
         } catch (err) {
+            const diagnostics = errorToDiagnostics(err);
             self.postMessage({
                 type: 'compile-error',
                 id: msg.id,
                 message: err instanceof Error ? err.message : String(err),
+                diagnostics,
             });
         }
         return;
@@ -315,7 +383,7 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (msg.type === 'compile-vector') {
         if (!initialized) {
-            self.postMessage({ type: 'compile-error', id: msg.id, message: 'Compiler not ready' });
+            self.postMessage({ type: 'compile-error', id: msg.id, message: 'Compiler not ready', diagnostics: [{ severity: 'error', message: 'Compiler not ready', hints: [] }] });
             return;
         }
 
@@ -362,14 +430,16 @@ self.onmessage = async (event: MessageEvent) => {
                     pageWidths: cachedPageInfo.widths,
                 });
             } catch (err) {
-                log.error(`[typst-worker] compile-vector ERROR:`, err);
+                log.debug(`[typst-worker] compile-vector: user error:`, err);
                 // Clean up on error to free memory
                 disposeSession();
                 clearPageCache();
+                const diagnostics = errorToDiagnostics(err);
                 self.postMessage({
                     type: 'compile-error',
                     id: msg.id,
                     message: err instanceof Error ? err.message : String(err),
+                    diagnostics,
                 });
             } finally {
                 isCompiling = false;
@@ -393,11 +463,11 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (msg.type === 'render-page') {
         if (!initialized) {
-            self.postMessage({ type: 'compile-error', id: msg.id, message: 'Compiler not ready' });
+            self.postMessage({ type: 'compile-error', id: msg.id, message: 'Compiler not ready', diagnostics: [{ severity: 'error', message: 'Compiler not ready', hints: [] }] });
             return;
         }
         if (!cachedSession || !cachedPageInfo) {
-            self.postMessage({ type: 'compile-error', id: msg.id, message: 'No compiled data. Call compile-vector first.' });
+            self.postMessage({ type: 'compile-error', id: msg.id, message: 'No compiled data. Call compile-vector first.', diagnostics: [{ severity: 'error', message: 'No compiled data. Call compile-vector first.', hints: [] }] });
             return;
         }
 
@@ -427,7 +497,7 @@ self.onmessage = async (event: MessageEvent) => {
         const pageHeight = cachedPageInfo.heights[pageOffset];
 
         if (pageWidth === undefined || pageHeight === undefined) {
-            self.postMessage({ type: 'compile-error', id, message: `Invalid page offset: ${pageOffset}` });
+            self.postMessage({ type: 'compile-error', id, message: `Invalid page offset: ${pageOffset}`, diagnostics: [{ severity: 'error', message: `Invalid page offset: ${pageOffset}`, hints: [] }] });
             return;
         }
 
@@ -480,11 +550,13 @@ self.onmessage = async (event: MessageEvent) => {
                 { transfer: [bitmap] }
             );
         } catch (err) {
-            log.error(`[typst-worker] render-page ERROR:`, err);
+            log.warn(`[typst-worker] render-page ERROR:`, err);
+            const diagnostics = errorToDiagnostics(err);
             self.postMessage({
                 type: 'compile-error',
                 id,
                 message: err instanceof Error ? err.message : String(err),
+                diagnostics,
             });
         }
     }

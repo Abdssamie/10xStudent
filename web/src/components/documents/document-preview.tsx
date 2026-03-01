@@ -6,7 +6,11 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import type { TypstCompiler, PageInfo } from "@/hooks/use-typst";
 import { VirtualizedPageList } from "./virtualized-page-list";
 
-/** Base pixels per point at 100% zoom */
+/**
+ * Base pixels per point for rendering at 1× device pixel ratio.
+ * This is the physical render resolution — independent of zoom.
+ * Zoom is applied via CSS transform, not by changing the canvas resolution.
+ */
 const BASE_PIXEL_PER_PT = 2.0;
 
 /** Zoom level presets (percentage) */
@@ -52,7 +56,15 @@ export const DocumentPreview = React.memo(function DocumentPreview({
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const pixelPerPt = BASE_PIXEL_PER_PT * (zoom / 100);
+  /**
+   * Render resolution: always at BASE_PIXEL_PER_PT × devicePixelRatio.
+   * This is the canvas buffer resolution passed to the Typst WASM renderer.
+   * Zoom is applied purely via CSS — the canvas is never re-rendered at a
+   * lower resolution just because the user zoomed out.
+   */
+  const pixelPerPt =
+    BASE_PIXEL_PER_PT *
+    (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1);
 
   const handleZoomIn = useCallback(() => {
     setZoom((z) => nextZoomStep(z, "in"));
@@ -152,6 +164,7 @@ export const DocumentPreview = React.memo(function DocumentPreview({
             compiler={compiler}
             pageInfo={pageInfo}
             pixelPerPt={pixelPerPt}
+            zoom={zoom}
             version={compileVersion}
           />
         ) : (

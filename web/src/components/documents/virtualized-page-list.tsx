@@ -12,7 +12,10 @@ interface PageSlotProps {
   widthPt: number;
   /** Page height in points */
   heightPt: number;
+  /** Render resolution: physical pixels per typographic point (HiDPI-aware) */
   pixelPerPt: number;
+  /** Zoom level as a fraction (e.g. 1.0 = 100%, 0.5 = 50%). Applied via CSS. */
+  zoomScale: number;
   compiler: TypstCompiler;
   /** Callback when page rendering completes */
   onRendered?: (pageIndex: number) => void;
@@ -27,6 +30,7 @@ const PageSlot = memo(function PageSlot({
   widthPt,
   heightPt,
   pixelPerPt,
+  zoomScale,
   compiler,
   onRendered,
 }: PageSlotProps) {
@@ -34,16 +38,27 @@ const PageSlot = memo(function PageSlot({
   const [isVisible, setIsVisible] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
-  // Track the pixelPerPt used for the current render to detect zoom changes
+  // Track the pixelPerPt used for the current render to detect resolution changes
   const renderedAtPptRef = useRef<number | null>(null);
 
-  // Display dimensions (CSS pixels)
-  const displayWidth = widthPt * pixelPerPt;
-  const displayHeight = heightPt * pixelPerPt;
-
-  // Canvas dimensions (actual pixels for crisp rendering)
+  /**
+   * The canvas physical dimensions — this is the render resolution.
+   * We render at full HiDPI quality regardless of zoom level.
+   */
   const canvasWidth = Math.ceil(widthPt * pixelPerPt);
   const canvasHeight = Math.ceil(heightPt * pixelPerPt);
+
+  /**
+   * The CSS display size at 100% zoom (1 CSS px per logical px).
+   * The canvas is then scaled down via CSS transform to apply zoom.
+   * This keeps the render buffer crisp at all zoom levels.
+   */
+  const cssWidth = widthPt * (pixelPerPt / (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1));
+  const cssHeight = heightPt * (pixelPerPt / (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1));
+
+  /** Outer container reserves space as if the page is displayed at zoomScale */
+  const displayWidth = cssWidth * zoomScale;
+  const displayHeight = cssHeight * zoomScale;
 
   // IntersectionObserver to detect visibility
   useEffect(() => {
@@ -63,7 +78,7 @@ const PageSlot = memo(function PageSlot({
     return () => observer.disconnect();
   }, []);
 
-  // Reset rendered state when pixelPerPt changes (zoom)
+  // Reset rendered state when pixelPerPt changes (device pixel ratio or base resolution change)
   useEffect(() => {
     if (renderedAtPptRef.current !== null && renderedAtPptRef.current !== pixelPerPt) {
       setIsRendered(false);
@@ -108,15 +123,23 @@ const PageSlot = memo(function PageSlot({
         marginBottom: PAGE_GAP_PX,
       }}
     >
+      {/*
+        The canvas renders at full HiDPI resolution (canvasWidth × canvasHeight).
+        CSS width/height set it to logical pixels (cssWidth × cssHeight at 100% zoom).
+        transform: scale(zoomScale) shrinks/grows it visually without re-rendering.
+        transform-origin: top left keeps it anchored to the container top-left.
+      */}
       <canvas
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
         className="block rounded shadow-lg"
         style={{
-          width: displayWidth,
-          height: displayHeight,
+          width: cssWidth,
+          height: cssHeight,
           backgroundColor: "#ffffff",
+          transformOrigin: "top left",
+          transform: `scale(${zoomScale})`,
         }}
       />
       {isRendering && (
@@ -138,7 +161,10 @@ const PageSlot = memo(function PageSlot({
 interface VirtualizedPageListProps {
   compiler: TypstCompiler;
   pageInfo: PageInfo;
+  /** Render resolution: physical pixels per typographic point (HiDPI-aware) */
   pixelPerPt: number;
+  /** Zoom level as a percentage (e.g. 100 = 100%, 50 = 50%) */
+  zoom: number;
   /** Increment this to force re-render of all pages */
   version?: number;
 }
@@ -146,14 +172,19 @@ interface VirtualizedPageListProps {
 /**
  * Virtualized list of Typst pages with lazy loading.
  * Only renders pages that are visible in the viewport.
+ * Zoom is applied via CSS transform — pages are always rendered at full
+ * HiDPI resolution regardless of zoom level.
  */
 export function VirtualizedPageList({
   compiler,
   pageInfo,
   pixelPerPt,
+  zoom,
   version = 0,
 }: VirtualizedPageListProps) {
   const [renderedCount, setRenderedCount] = useState(0);
+  const zoomScale = zoom / 100;
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
 
   // Reset rendered count when version changes (new compilation)
   useEffect(() => {
@@ -164,9 +195,9 @@ export function VirtualizedPageList({
     setRenderedCount((prev) => Math.max(prev, pageIndex + 1));
   }, []);
 
-  // Calculate total height for scroll container
+  // Calculate total height for scroll container using display dimensions (after zoom)
   const totalHeight = pageInfo.heights.reduce(
-    (sum, h) => sum + h * pixelPerPt + PAGE_GAP_PX,
+    (sum, h) => sum + (h * pixelPerPt / dpr) * zoomScale + PAGE_GAP_PX,
     0
   );
 
@@ -182,6 +213,7 @@ export function VirtualizedPageList({
           widthPt={pageInfo.widths[i] ?? 595.28} // Default A4 width
           heightPt={pageInfo.heights[i] ?? 841.89} // Default A4 height
           pixelPerPt={pixelPerPt}
+          zoomScale={zoomScale}
           compiler={compiler}
           onRendered={handlePageRendered}
         />
